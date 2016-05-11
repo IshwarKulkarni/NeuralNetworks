@@ -25,7 +25,8 @@ public:
         return ErrFPrime;
     }
 
-    Network(std::ifstream& inFile);
+    Network(std::string inFile);
+    
     Network(unsigned outSize) {
         ErrFPrime = Volume({ outSize, 1,1 });
     }
@@ -70,6 +71,23 @@ public:
         do { l->Print(printList, out);  }while ((l = l->NextLayer()) != nullptr);
         out << "===================================================\n"; out.flush();
     }
+
+    inline void Sanity()
+    {
+        size_t numLayers = size(), counter = 0;
+        const Layer* l = front();
+        do { counter++; } while ((l = l->NextLayer()) != nullptr);
+
+        if (counter != numLayers)
+            throw std::logic_error("All layers are not linked correctly");
+
+        counter = 0; l = back();
+        do { counter++; } while ((l = l->PrevLayer()) != nullptr);
+
+        if (counter != numLayers)
+            throw std::logic_error("All layers are not linked correctly");
+    }
+
 
     ~Network(){ for (auto& l : *this) delete l; }
 
