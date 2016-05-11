@@ -4,10 +4,10 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>
-        DATA_LOCATION="..\\..\\..\\data\\";
+        DATA_LOCATION="..\\..\\data\\";
       </PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>..\..\..\src;$(SourceLocation)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;$(SourceLocation)</AdditionalIncludeDirectories>
 	</ClCompile>
   </ItemDefinitionGroup>
 </Project>
