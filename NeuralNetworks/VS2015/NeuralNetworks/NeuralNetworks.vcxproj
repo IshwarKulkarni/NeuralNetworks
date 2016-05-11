@@ -18,24 +18,10 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\..\src\data\DataSets.hxx" />
-    <ClInclude Include="..\..\..\src\data\MINST-ImageReader.hxx" />
-    <ClInclude Include="..\..\..\src\neuralnets\Activation.hxx" />
-    <ClInclude Include="..\..\..\src\neuralnets\ConvolutionLayer.hxx" />
-    <ClInclude Include="..\..\..\src\neuralnets\FullyConnectedLayer.hxx" />
-    <ClInclude Include="..\..\..\src\neuralnets\Layer.hxx" />
-    <ClInclude Include="..\..\..\src\neuralnets\Network.hxx" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\src\data\DataSets.cxx" />
-    <ClCompile Include="..\..\..\src\data\MINST-ImageReader.cxx" />
-    <ClCompile Include="..\..\..\src\neuralnets\NeuralNet_Main.cxx" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{4113F06C-C99D-416A-8CC8-6942D8E1E60F}</ProjectGuid>
+    <ProjectGuid>{352EF117-8B6E-4E7B-8480-D0C82F2DFE2B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>NeuralNetworkBasic</RootNamespace>
+    <RootNamespace>NeuralNetworks</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -65,8 +51,8 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <Import Project="..\Config.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="Config.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
@@ -104,7 +90,6 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\..\src;$(SourceLocation)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,8 +120,6 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>..\..\..\src;$(SourceLocation)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,6 +146,12 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\src\data\DataSets.cxx" />
+    <ClCompile Include="..\..\..\src\data\MINST-ImageReader.cxx" />
+    <ClCompile Include="..\..\..\src\neuralnets\Network.cxx" />
+    <ClCompile Include="..\..\..\src\neuralnets\NeuralNet_Main.cxx" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
