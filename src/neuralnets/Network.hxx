@@ -11,22 +11,34 @@
 typedef SimpleMatrix::Matrix3<double> Volume;
 typedef SimpleMatrix::Matrix<double> Frame;
 
+struct ErrorFunctionType {
+    virtual void Prime(const Volume& out, const double* target, Volume& res) const = 0;
+    virtual void operator()(const Volume& out, const double* target, Volume& res) const = 0;
+};
+
+struct MeanSquareErrorType : public ErrorFunctionType
+{
+    virtual void Prime(const Volume& out, const double* target, Volume& res) const override
+    {
+        for (size_t i = 0; i < out.size(); ++i)
+            res[i] = out[i] - target[i];
+    }
+    virtual void operator()(const Volume& out, const double* target, Volume& res) const override
+    {
+        for (size_t i = 0; i < out.size(); ++i)
+        {
+            double r = target[i] - out[i];
+            res[i] = 0.5 * r*r;
+        }
+    }
+};
 
 class Network : public std::vector<Layer*>
 {
     Volume ErrFRes;
-
+    const ErrorFunctionType& ErrFunc = MeanSquareErrorType();
 
 public:
-
-    // only implementing MSE error function; d/do ( -1/2 * (t-o)^2 ) ) = o-t
-    inline Volume& GetErrFRes(const Volume& out, const double* target) 
-    {
-        for (size_t i = 0; i < out.size(); ++i)
-            ErrFRes[i] = out[i] - target[i];
-
-        return ErrFRes;
-    }
 
     Network(std::string inFile);
     
@@ -43,7 +55,7 @@ public:
         {
             In.data = begin->Input;
             
-            GetErrFRes(front()->ForwardPass(In), begin->Target);
+            ErrFunc.Prime(front()->ForwardPass(In), begin->Target, ErrFRes);
             
             back()->BackwardPass(ErrFRes);
 
@@ -54,8 +66,7 @@ public:
         }
         for (auto& l : *this) l->WeightDecay(DecayRate);
     }
-
-
+    
     template<typename TestIter>
     inline double Test(TestIter begin, TestIter end)
     {
