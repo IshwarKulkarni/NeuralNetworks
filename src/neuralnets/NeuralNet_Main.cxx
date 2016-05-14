@@ -23,14 +23,16 @@ void ManualInitNetwork(Network& nn)
 void main1()
 {
     Vec::Size3 in;; unsigned out;
+    cout << "Reading data..." << endl;
     auto data = LoadMnistData2(in, out);
     data.Summarize(Log, false);
 
+    cout << "Building network..." << endl;
     Network nn(DATA_LOCATION "MNIST_Network.config");
     auto& highLow = nn.GetOutputHiLo();
     data.ResetHighLow(highLow.first, highLow.second);    
 
-    cout << endl << "\nStarting training... " << endl;
+    cout << endl << "Starting training... " << endl;
 
     Timer  epochTime("ClassifierTime");
 

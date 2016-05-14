@@ -10,6 +10,8 @@
 #include <random>
 #include <ctime>
 #include <cstring>
+#include <iostream>
+#include <fstream>
 
 #define ARRAY_LENGTH(arr)    (arr == 0 ? 0 : sizeof(arr)/sizeof(arr[0]) )
 #define ARRAYEND(arr) (arr + ARRAY_LENGTH(arr))
@@ -117,12 +119,6 @@ namespace StringUtils
 
 namespace Logging
 {
-    static std::ofstream Log("LogFile.txt", std::ofstream::out 
-#ifdef APPEND_TO_LOG
-        | std::ofstream::app
-#endif 
-        );
-
     inline const char* TimeNowStringFull(time_t now = -1)
     {
         if (now == -1)
@@ -141,6 +137,58 @@ namespace Logging
 
         return stamp;
     }
+
+    class Logger
+    {
+    public:
+
+        static Logger& Instance() { static Logger inst;  return inst; }
+
+        operator std::ofstream&() { return LogFile; }
+
+        static inline const char* LogFileName() { return "LogFile.txt"; }
+
+        template <typename Type>
+        inline Logger& operator<<(const Type& t)
+        {
+            try
+            {
+                Instance().LogFile << (t);
+            }
+            catch (std::exception e)
+            {
+                Instance().LogFile << "Catastrophic error: " << e.what() << std::endl;
+                throw e;
+            }
+            return Instance();
+        }
+
+    private:
+
+        std::ofstream LogFile;
+
+        Logger()
+        {
+            LogFile.open(LogFileName(), std::ofstream::out | std::ofstream::app);
+            LogFile << "Session Logging Started At : " << TimeNowStringFull() << " ********" << std::endl;
+            std::cerr.rdbuf(LogFile.rdbuf());
+        };
+
+        ~Logger()
+        {
+            LogFile.open(LogFileName(), std::ofstream::out | std::ofstream::app);
+            LogFile << "Session Logging Ended At : " << TimeNowStringFull() << " ********" << std::endl;
+            LogFile.flush();
+        };
+
+        Logger& operator=(const Logger&);
+        Logger(const Logger&);
+    };
+
+#define LogPrintf(...)  fprintf(stderr, __VA_ARGS__); fprintf(stdout, __VA_ARGS__)
+#define LOG_LOC()     __FILE__ << ":" << __LINE__ << " in " << __FUNCTION__
+
+    static Logger& Log = Logger::Instance();
 
     class Timer
     {
