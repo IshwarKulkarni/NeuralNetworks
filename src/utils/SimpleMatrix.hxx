@@ -168,8 +168,7 @@ namespace SimpleMatrix
         T DotCornerAt(Vec::Vec2<size_t> s, const Matrix<U>& kernel) const
         {
             Vec::Vec2<size_t> e = { s.x + kernel.size.x, s.y + kernel.size.y };
-            Logging::Log << s << " -> " << e << std::endl;
-
+            
             T sum = 0;
             for2d2(s, e) sum += at(y, x) * kernel.at(y - s.y, x - s.x);
 
@@ -358,23 +357,23 @@ namespace SimpleMatrix
         return ret;
     }
 
-    template<typename T, typename O>
-    inline O& operator<<(O& out, const Matrix3<T>& k)
+    template<typename T>
+    inline std::ostream& operator<<(std::ostream& out, const Matrix3<T>& k)
     {
         out << k.size;
         for (size_t i = 0; i < k.size.z; ++i){ out << "\nFrame " << i << " : " << k(i); break; }
         return out;
     } 
 
-    template<typename T, typename O>
-    inline O& operator<<(O& out, const Matrix<T>& k) { 
+    template<typename T>
+    inline std::ostream& operator<<(std::ostream& out, const Matrix<T>& k) {
         //Out2d(out, k.data, k.size.w, k.size.h, "", 9);
         OutCSV(out, k, ""); 
         return out; 
     }
 
-    template<typename T, typename O>
-    inline void OutCSV(O& out, const Matrix<T>& k, const char* msg)
+    template<typename T>
+    inline void OutCSV(std::ostream& out, const Matrix<T>& k, const char* msg)
     {
         out << msg << "\n" << std::left << std::setprecision(9);
         for (size_t i = 0; i < k.size.h; ++i)
@@ -388,8 +387,8 @@ namespace SimpleMatrix
         out.flush();
     }
 
-    template<typename O, typename T>
-    inline void Out2d(O& outStream, T& data, unsigned w, unsigned h, const char* msg = "", unsigned fwidth = 7)
+    template<typename T>
+    inline void Out2d(std::ostream& outStream, T& data, unsigned w, unsigned h, const char* msg = "", unsigned fwidth = 7)
     {
         outStream << msg << "\n";
         unsigned digits = 0;
@@ -530,7 +529,7 @@ namespace SimpleMatrix
 
     static Matrix<float> SobelV(Vec::Size2(3, 3)), SobelH(Vec::Size2(3, 3));
 
-    static bool MakeFilters()
+    inline bool MakeFilters()
     {
         float sobelV[] = { -1, -2, -1 , 0, 0, 0 ,  1, 2, 1 };
         float sobelH[] = { -1, -0,  1 ,-2, 0, 2 , -1, 0, 1 };
@@ -541,6 +540,5 @@ namespace SimpleMatrix
         return true;
     }
 
-    static const bool FiltersMade = MakeFilters();
 }
 #endif

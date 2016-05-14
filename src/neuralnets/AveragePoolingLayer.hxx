@@ -148,7 +148,8 @@ public:
     {
         bool all = printList.find("all") != std::string::npos;
         if (all || printList.find("Summary") != std::string::npos)
-            out << "\n--> Summary for " << Name
+            out << "\n--> Summary for " << Name << "\t| " << Act->Name
+                << "\nEta: " << Eta
                 << "\nInput Size  : " << Input.size
                 << "\nWindow Size : " << Windows.WindowSize
                 << "\nOutput Size : " << Output.size

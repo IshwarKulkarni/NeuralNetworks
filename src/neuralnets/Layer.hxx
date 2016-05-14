@@ -66,7 +66,7 @@ public:
 
     void WeightSanity()    {
         
-        auto& checkIsMessedUp = [&](Volume& toCheck, std::string name)
+        const auto& checkIsMessedUp = [&](Volume& toCheck, std::string name)
         {
             for (auto* d = toCheck.begin(); d != toCheck.end(); ++d)
             {

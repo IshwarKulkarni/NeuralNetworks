@@ -142,6 +142,8 @@ namespace Logging
     {
     public:
 
+        struct FlushType { } flush;
+
         static Logger& Instance() { static Logger inst;  return inst; }
 
         operator std::ofstream&() { return LogFile; }
@@ -151,17 +153,12 @@ namespace Logging
         template <typename Type>
         inline Logger& operator<<(const Type& t)
         {
-            try
-            {
-                Instance().LogFile << (t);
-            }
-            catch (std::exception e)
-            {
-                Instance().LogFile << "Catastrophic error: " << e.what() << std::endl;
-                throw e;
-            }
+            try { Instance().LogFile << t;  }
+            catch (std::exception e) { Instance().LogFile << "Catastrophic error: " << e.what() << std::endl; throw e; }
             return Instance();
         }
+
+        inline Logger& operator<<(const FlushType& t) { LogFile.flush(); return Instance(); }
 
     private:
 
@@ -169,15 +166,22 @@ namespace Logging
 
         Logger()
         {
-            LogFile.open(LogFileName(), std::ofstream::out | std::ofstream::app);
-            LogFile << "Session Logging Started At : " << TimeNowStringFull() << " ********" << std::endl;
-            std::cerr.rdbuf(LogFile.rdbuf());
+            LogFile.open(LogFileName(), std::ofstream::out);
+            LogFile << "Session Logging Started At : " << TimeNowStringFull() << "\nSession Type: " <<
+#ifdef _DEBUG
+                " Debug \n"
+#elif defined NDEBUG
+                " Release\n"
+#else
+                " Unknown, This is likely a bad build"
+#endif
+                ; std::cerr.rdbuf(LogFile.rdbuf());
         };
 
         ~Logger()
         {
             LogFile.open(LogFileName(), std::ofstream::out | std::ofstream::app);
-            LogFile << "Session Logging Ended At : " << TimeNowStringFull() << " ********" << std::endl;
+            LogFile << "Session Logging Ended At : " << TimeNowStringFull() << std::endl;
             LogFile.flush();
         };
 

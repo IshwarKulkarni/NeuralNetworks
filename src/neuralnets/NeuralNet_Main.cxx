@@ -20,47 +20,45 @@ void ManualInitNetwork(Network& nn)
     nn.push_back(new FullyConnectedLayer("Out",  25, 10, "Sigmoid", nn.back()));
 }
 
-void main1()
-{
-    Vec::Size3 in;; unsigned out;
-    cout << "Reading data..." << endl;
-    auto data = LoadMnistData2(in, out);
-    data.Summarize(Log, false);
-
-    cout << "Building network..." << endl;
-    Network nn(DATA_LOCATION "MNIST_Network.config");
-    auto& highLow = nn.GetOutputHiLo();
-    data.ResetHighLow(highLow.first, highLow.second);    
-
-    cout << endl << "Starting training... " << endl;
-
-    Timer  epochTime("ClassifierTime");
-
-    unsigned maxEpochs = 20;
-    double   targetAcc = 0.95, acc = 0.;
-    for (size_t i = 0; i < maxEpochs && acc < targetAcc; i++)
-    {
-        epochTime.TimeFromLastCheck();
-        nn.Train(data.TrainBegin(), data.TrainEnd());
-        double lastCheck = epochTime.TimeFromLastCheck();
-        cout << "Train Epoch " << i << ">  "
-            << "[" <<  lastCheck<< "s]:\t"
-            << "Validation Accuracy : " << (acc = nn.Test(data.VldnBegin(), data.VldnEnd()) ) * 100 << "%"
-            << endl;
-    }
-}
-   
 int main()
 {
     try
     {
-        main1();
+
+        Vec::Size3 in;; unsigned out;
+        cout << "Reading data..." << endl;
+        auto data = LoadMnistData2(in, out);
+        data.Summarize(Log, false);
+
+        cout << "Building network..." << endl;
+        Network nn(DATA_LOCATION "MNIST_Network.config");
+        auto& highLow = nn.GetOutputHiLo();
+        data.ResetHighLow(highLow.first, highLow.second);
+
+        cout << endl << "Starting training... " << endl;
+
+        Timer  epochTime("ClassifierTime");
+
+        unsigned maxEpochs = 20;
+        double   targetAcc = 0.95, acc = 0.;
+        for (size_t i = 0; i < maxEpochs && acc < targetAcc; i++)
+        {
+            epochTime.TimeFromLastCheck();
+            nn.Train(data.TrainBegin(), data.TrainEnd());
+            double lastCheck = epochTime.TimeFromLastCheck();
+            cout << "Train Epoch " << i << ">  "
+                << "[" << lastCheck << "s]:\t"
+                << "Validation Accuracy : " << (acc = nn.Test(data.VldnBegin(), data.VldnEnd())) * 100 << "%"
+                << endl;
+        }
+
     }
     catch (std::exception e)
     {
-        cout << e.what() << endl;
-        cin.get();
-        return -1;
+        std::cerr << e.what() << endl;
+        throw e;
     }
+
     return 0;
 }
+   

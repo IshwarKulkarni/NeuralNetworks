@@ -11,7 +11,7 @@ Network::Network(std::string mnistLoc)
 {
     std::ifstream inFile(mnistLoc.c_str(), ios::in | ios::binary);
     if (!inFile.good())
-        throw std::invalid_argument(("File to read network config from is unavailable to read at: " + mnistLoc).c_str());
+        throw std::invalid_argument(("File to read network config from is unavailable to read from: " + mnistLoc).c_str());
 
     char buffer[256];
     while (inFile && inFile.getline(buffer, 256))
