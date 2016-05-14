@@ -6,7 +6,7 @@
       <PreprocessorDefinitions>
         DATA_LOCATION="..\\..\\data\\";
       </PreprocessorDefinitions>
-      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4996;4267</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>..\..\src;$(SourceLocation)</AdditionalIncludeDirectories>
 	</ClCompile>
   </ItemDefinitionGroup>

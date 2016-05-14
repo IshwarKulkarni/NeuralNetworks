@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cstring>
+#include <fstream>
 
 #include "Vec23.hxx"
 
@@ -22,26 +23,26 @@ Not-Objective:
 */
 
 #define for2d2(s,e) \
-    for(unsigned y = s.y; y < unsigned(e.y); ++y) \
-            for(unsigned x = s.x; x < unsigned(e.x); ++x) 
+    for(size_t y = s.y; y < size_t(e.y); ++y) \
+            for(size_t x = s.x; x < size_t(e.x); ++x) 
 
 
-#define for2d(pxy) for(unsigned y = 0; y < pxy.y; ++y) for(unsigned x = 0; x < pxy.x; ++x) 
+#define for2d(pxy) for(size_t y = 0; y < pxy.y; ++y) for(size_t x = 0; x < pxy.x; ++x) 
 
 #define for3d2(s,e) \
-    for(unsigned z = s.z; z < unsigned(e.z); ++z) \
-        for(unsigned y = s.y; y < unsigned(e.y); ++y) \
-            for(unsigned x = s.x; x < unsigned(e.x); ++x) 
+    for(size_t z = s.z; z < size_t(e.z); ++z) \
+        for(size_t y = s.y; y < size_t(e.y); ++y) \
+            for(size_t x = s.x; x < size_t(e.x); ++x) 
 
 #define for3d(pxy) \
-    for(unsigned z = 0; z < pxy.z; ++z) \
-        for(unsigned y = 0; y < pxy.y; ++y) \
-             for(unsigned x = 0; x < pxy.x; ++x) 
+    for(size_t z = 0; z < pxy.z; ++z) \
+        for(size_t y = 0; y < pxy.y; ++y) \
+             for(size_t x = 0; x < pxy.x; ++x) 
 
 namespace SimpleMatrix
 {
     template<typename T>
-    T**  Reshape(T* in, unsigned width, unsigned height) // can convert T to T*, NDim to (N+1)Dim arrays;
+    T**  Reshape(T* in, size_t width, size_t height) // can convert T to T*, NDim to (N+1)Dim arrays;
     {
         T**  mat = new T*[height];
         for (size_t i = 0; i < height; i++)
@@ -50,7 +51,7 @@ namespace SimpleMatrix
     }
 
     template<typename OneD, typename TwoD>
-    void Reshape(OneD& oneD, TwoD& twoD, unsigned width, unsigned height)
+    void Reshape(OneD& oneD, TwoD& twoD, size_t width, size_t height)
     {
         for (unsigned i = 0; i < height; i++)
             twoD[i] = &(oneD[i*width]);
@@ -93,6 +94,12 @@ namespace SimpleMatrix
                 ret[i][j] = (a & 1) ? ones : zeros;
 
         return ret;
+    }
+
+    template<typename diffType>
+    inline Vec::Size3 IndexTo3dIdx(diffType idx, const Vec::Size3& size)
+    {
+        return Vec::Size3(idx % size.y * size.z, (idx / size.x) % size.z, idx / (size.x*size.y));
     }
 
     // Pointers are not freed;
@@ -157,16 +164,28 @@ namespace SimpleMatrix
             return sum;
         }
 
-        inline T& at(int y, int x)
+       template<typename U>
+        T DotCornerAt(Vec::Vec2<size_t> s, const Matrix<U>& kernel) const
+        {
+            Vec::Vec2<size_t> e = { s.x + kernel.size.x, s.y + kernel.size.y };
+            Logging::Log << s << " -> " << e << std::endl;
+
+            T sum = 0;
+            for2d2(s, e) sum += at(y, x) * kernel.at(y - s.y, x - s.x);
+
+            return sum;
+        }
+
+        inline const T& at(int y, int x) const
         {
 #ifdef _DEBUG
-            if(x < 0 || y < 0 || x >= int(size.x) || y >= int(size.y) )
+            if (x < 0 || y < 0 || x >= int(size.x) || y >= int(size.y))
                 throw std::out_of_range("Index invalid: " + std::to_string(x) + "," + std::to_string(y));
 #endif
             return data[y][x];
         }
 
-        inline const T& at(int y, int x) const
+        inline T& at(int y, int x)
         {
 #ifdef _DEBUG
             if (x < 0 || y < 0 || x >= int(size.x) || y >= int(size.y))
@@ -251,10 +270,17 @@ namespace SimpleMatrix
         {
             //Logging::Log << "\nAt: " << loc << "\n";
             Vec::Size3 middle = kernel.size / 2; middle.z = 0;
-
-            Vec::Vec2<int> start( loc.x - middle.x, loc.y - middle.y);
-            Vec::Vec2<int>   end(start.x + kernel.size.x, start.y + kernel.size.y);
+#ifdef _MSC_VER
+#pragma warning( push  )
+#pragma warning( disable : 4267 )
+#endif
+            Vec::Loc start( loc.x - middle.x, loc.y - middle.y);
+            Vec::Loc   end(start.x + kernel.size.x, start.y + kernel.size.y);
             auto iStart = start;
+#ifdef _MSC_VER
+#pragma warning( pop  )
+#pragma warning( disable : 4267 )
+#endif
             
             start.x = std::max(0, start.x);    start.y = std::max(0, start.y);
             end.x = std::min((int)size.x, end.x); end.y = std::min((int)size.y, end.y);
@@ -285,7 +311,7 @@ namespace SimpleMatrix
             return data[z][y][x];
         }
 
-        inline Matrix<T> operator()(unsigned z)
+        inline Matrix<T> operator()(size_t z)
         {
 #ifdef _DEBUG
             if (z >= size.z)
@@ -294,7 +320,7 @@ namespace SimpleMatrix
             return{ size, data[z]};
         }
 
-        inline const Matrix<T> operator()(unsigned z) const
+        inline const Matrix<T> operator()(size_t z) const
         {
 #ifdef _DEBUG
             if (z >= size.z)
@@ -333,24 +359,29 @@ namespace SimpleMatrix
     }
 
     template<typename T, typename O>
-    O& operator<<(O& out, const Matrix3<T>& k)
+    inline O& operator<<(O& out, const Matrix3<T>& k)
     {
-        out << k.size ;
-        for (size_t i = 0; i < k.size.z; ++i)
-            OutCSV(out, k(i), k.size.x, k.size.y, ("\nFrame[ " + std::to_string(i) + " ]"  + ",\t").c_str());
-
+        out << k.size;
+        for (size_t i = 0; i < k.size.z; ++i){ out << "\nFrame " << i << " : " << k(i); break; }
         return out;
     } 
 
     template<typename T, typename O>
-    inline void OutCSV(O& out, const Matrix<T>& k, unsigned w, unsigned h, const char* msg)
+    inline O& operator<<(O& out, const Matrix<T>& k) { 
+        //Out2d(out, k.data, k.size.w, k.size.h, "", 9);
+        OutCSV(out, k, ""); 
+        return out; 
+    }
+
+    template<typename T, typename O>
+    inline void OutCSV(O& out, const Matrix<T>& k, const char* msg)
     {
-        out << std::setprecision(9);
-        for (unsigned i = 0; i < h; ++i)
+        out << msg << "\n" << std::left << std::setprecision(9);
+        for (size_t i = 0; i < k.size.h; ++i)
         {
             out << "\n";
-            for (unsigned j = 0; j < w; ++j)
-                out << k.data[i][j] << ", ";
+            for (size_t j = 0; j < k.size.w; ++j)
+                out << k.data[i][j] << ",\t";
             
         }
         out << "\n";
@@ -380,7 +411,7 @@ namespace SimpleMatrix
             outStream << std::setw(digits + 1) << std::setfill(' ') << i <<  "|";
             for (unsigned j = 0; j < w ; ++j)
                 outStream    << std::setprecision(fwidth-2) << std::setw(fwidth + 1) << std::setfill('0')
-                            << std::showpoint << std::left<< std::fixed
+                            << std::showpoint << std::left
                             << data[i][j] << " | ";
 
             outStream << "\n";
@@ -391,7 +422,7 @@ namespace SimpleMatrix
     }
 
     template <typename T>
-    Matrix<T> ReadCSV(std::istream& strm)
+    inline Matrix<T> ReadCSV(std::istream& strm)
     {
         std::string line;
         std::getline(strm, line, '\n');
@@ -447,8 +478,7 @@ namespace SimpleMatrix
             }
         }
     }
-
-  
+      
     template<typename T>
     void  ReshapeUnmanaged(T**& mat, T*& in, unsigned width, unsigned height) // can convert T to T*, NDim to (N+1)Dim arrays;
     {

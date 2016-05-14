@@ -33,10 +33,10 @@ namespace Utils
         return (d1 <= 0.0 && d2 <= 0.0) || (d1 > 0.0 && d2 > 0.0);
     }
 
-    inline unsigned iDivUp(unsigned a, unsigned b)
+    template<typename T>
+    inline T iDivUp(T a, T b)
     {
-        unsigned r = a / b; 
-        return ( a % b ? ++r : r );
+        return ( a % b ? ((a / b) + 1) : (a / b) );
     }
 
     static std::default_random_engine Generator

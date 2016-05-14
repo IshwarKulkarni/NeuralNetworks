@@ -1,6 +1,10 @@
 #ifndef __VEC2__
 #define __VEC2__
 
+#ifdef __GNUC__
+#include <cstddef>
+#endif
+
 namespace Vec
 {
     template<typename T>
@@ -22,13 +26,20 @@ namespace Vec
 
         inline Vec2(T _x = 0, T _y = 0) : x(_x), y(_y) {}
 
-        /*constexpr*/ size_t size() const { return 2; }
         operator T*() { return Raw; }
-        inline unsigned operator()() const { return x*y; }
+        inline size_t operator()() const { return x*y; }
+
+        template<typename U> Vec2<T> operator-=(const Vec2<U>& o) { x -= o.x; y -= o.y; return *this; }
+        template<typename U> Vec2<T> operator+=(const Vec2<U>& o) { x += o.x; y += o.y; return *this; }
+        
+        template<typename U> Vec2<T> operator*=(const Vec2<U>& o) { x *= o.x; y *= o.y; return *this; }
     };
+    
+    template<typename T, typename U> Vec2<T> operator*(Vec2<T>& v, U o) { return{ v.x * o,  v.y * o }; }
+    template<typename T, typename U> Vec2<T> operator/(Vec2<T>& v, U o) { return{ v.x / o,  v.y / o }; }
 
     // element-wise operator
-    typedef Vec2<unsigned> Size2;
+    typedef Vec2<size_t> Size2;
 
     typedef Vec2<int> Loc;
     const Loc Origin = Loc(0, 0);
@@ -56,17 +67,18 @@ namespace Vec
         Vec3(T x_ = 0, T y_ = 0, const T& z_ =0) : x(x_), y(y_), z(z_) {}
         Vec3(Vec2<T> vec2, T _z = 1) : x(vec2.x), y(vec2.y), z(_z) {}
         
-        inline unsigned operator()() const { return x*y*z; }
-        /*constexpr*/ size_t size() const { return 3; }
+        inline T operator()() const { return x*y*z; }
         operator T*() { return Raw; }
         template<typename U> operator Vec2<U>() const { return Vec2<U>(x,y); }
 
         template<typename U> Vec3<T> operator+=(const Vec3<U>& o) { x += o.x, y += o.y, z += o.z; return *this; }
         template<typename U> Vec3<T> operator*=(const Vec3<U>& o) { x *= o.x, y *= o.y, z *= o.z; return *this; }
 
+        template<typename U> Vec2<T> operator+=(const Vec2<U>& o) { x += o.x; y += o.y; return *this; }
+        template<typename U> Vec2<T> operator*=(const Vec2<U>& o) { x *= o.x; y *= o.y; return *this; }
     };
 
-    typedef Vec3<unsigned> Size3;
+    typedef Vec3<size_t> Size3;
     static const Size3  Zeroes3(0, 0, 0);
 
     typedef Vec3<int> Loc3;

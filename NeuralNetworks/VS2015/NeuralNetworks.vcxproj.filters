@@ -15,17 +15,42 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\neuralnets\Network.cxx">
+    <ClCompile Include="..\..\src\data\DataSets.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\neuralnets\NeuralNet_Main.cxx">
+    <ClCompile Include="..\..\src\data\MINST-ImageReader.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\data\DataSets.cxx">
+    <ClCompile Include="..\..\src\neuralnets\Network.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\data\MINST-ImageReader.cxx">
+    <ClCompile Include="..\..\src\neuralnets\NeuralNet_Main.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\neuralnets\ConvolutionLayer.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\FullyConnectedLayer.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\Layer.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\Network.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\Activation.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\AveragePoolingLayer.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\data\MNIST_Network.config">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
