@@ -11,24 +11,27 @@
 typedef SimpleMatrix::Matrix3<double> Volume;
 typedef SimpleMatrix::Matrix<double> Frame;
 
+
 class Network : public std::vector<Layer*>
 {
-    Volume ErrFPrime;
+    Volume ErrFRes;
+
+
 public:
 
     // only implementing MSE error function; d/do ( -1/2 * (t-o)^2 ) ) = o-t
-    inline Volume& GetErrFPrime(const Volume& out, const double* target) 
+    inline Volume& GetErrFRes(const Volume& out, const double* target) 
     {
         for (size_t i = 0; i < out.size(); ++i)
-            ErrFPrime[i] = out[i] - target[i];
+            ErrFRes[i] = out[i] - target[i];
 
-        return ErrFPrime;
+        return ErrFRes;
     }
 
     Network(std::string inFile);
     
     Network(unsigned outSize) {
-        ErrFPrime = Volume({ outSize, 1,1 });
+        ErrFRes = Volume({ outSize, 1,1 });
     }
 
     template<typename TrainIter>
@@ -36,10 +39,18 @@ public:
     {
         Volume In = { front()->InputSize(), nullptr };
         NumTrainInEpoc = 0;
-        while( begin++ != end && ++NumTrainInEpoc && begin->Input) 
+        while( begin != end && ++NumTrainInEpoc && begin->Input) 
         {
             In.data = begin->Input;
-            back()->BackwardPass(GetErrFPrime(front()->ForwardPass(In), begin->Target));
+            
+            GetErrFRes(front()->ForwardPass(In), begin->Target);
+            
+            back()->BackwardPass(ErrFRes);
+
+            begin++;
+            
+            if (NumTrainInEpoc % 100 == 0)
+                for (auto& l : *this) l->WeightSanity();
         }
         for (auto& l : *this) l->WeightDecay(DecayRate);
     }
@@ -48,7 +59,7 @@ public:
     template<typename TestIter>
     inline double Test(TestIter begin, TestIter end)
     {
-        NumValCorrect = 0; NumVal = 0;
+        NumValCorrect = 0; NumVal = 0; VldnRMSE = 0;
         auto& pred = back()->GetAct()->ResultCmpPredicate;
         Volume In = { front()->InputSize(), nullptr };
         while (begin++ != end &&  ++NumVal)
@@ -57,7 +68,6 @@ public:
             const auto& out = front()->ForwardPass(In);
 
             NumValCorrect += std::equal(out.begin(), out.end(), begin->Target, pred);
-
         }
         return NumValCorrect / NumVal;
     }
@@ -82,14 +92,32 @@ public:
             throw std::logic_error("All layers are not linked correctly");
 
         counter = 0; l = back();
-        do { counter++; } while ((l = l->PrevLayer()) != nullptr);
+        do { 
+            counter++; 
+            auto prev = l->PrevLayer();
+            
+            if (prev && l->InputSize()() > prev->Out().size())
+            {
+                Logging::Log << "This Layer: \n";
+                l->Print("");
+                Logging::Log << "Produces more outputs than following Layer: \n";
+                prev->Print("");
+                throw std::invalid_argument("This condition is an error");
+            }
+            l = prev;
+        } while (l != nullptr);
 
         if (counter != numLayers)
             throw std::logic_error("All layers are not linked correctly");
+
     }
 
+    inline std::pair<double, double> Results() {
+        return std::make_pair( 0,0 );
+    }
 
     ~Network(){ for (auto& l : *this) delete l; }
+
 
 private:
 

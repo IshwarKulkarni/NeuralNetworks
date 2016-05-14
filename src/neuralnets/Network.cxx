@@ -1,6 +1,7 @@
-#include "ConvolutionLayer.hxx"
 #include "FullyConnectedLayer.hxx"
+#include "AveragePoolingLayer.hxx"
 #include "utils/CommandLine.hxx"
+#include "ConvolutionLayer.hxx"
 #include "Network.hxx"
 
 
@@ -52,9 +53,29 @@ Network::Network(std::string mnistLoc)
                     throw std::invalid_argument("Convolution layer descriptor is ill formed");
             }
         }
+        else if (StringUtils::beginsWith(line, "->AveragePoolingLayer"))
+        {
+            if (!size())
+                throw std::invalid_argument("Average pooling layer cannot be first layer");
+
+            if (dynamic_cast<AveragePoolingLayer*>(back()))
+                Logging::Log << "Two consecutive average layer? Bravo! ";
+
+            AvgPooLayerDesc desc;
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndAveragePoolingLayer");
+            
+            nvpp.Get("Name", desc.Name);
+            nvpp.Get("Activation", desc.Activation);
+            nvpp.Get("WindowSize", desc.WindowSize);
+            
+            if (desc.Name.length() && GetActivationByName(desc.Activation) )
+                push_back(new AveragePoolingLayer(desc, back()));
+            else
+                throw std::invalid_argument("Average pooling layer descriptor is ill formed");
+        }
         else if (StringUtils::beginsWith(line, "->FullyConnectedLayers"))
         {
-            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->FullyConnectedLayersEnd");
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndFullyConnectedLayers");
             const auto& nameSizes = nvpp.GetPairs<unsigned>();
 
             for (unsigned i = 0; i < nameSizes.size() - 1; ++i)
@@ -64,7 +85,7 @@ Network::Network(std::string mnistLoc)
                 const std::string& actName = StringUtils::StrTrim(splits.size() >1 ? splits[1] : "Sigmoid");
                 const std::string& layerName = splits[0];
 
-                size_t  inSize = nameSizes[i].second, outSize = nameSizes[i + 1].second;
+                unsigned  inSize = nameSizes[i].second, outSize = nameSizes[i + 1].second;
 
                 if (!inSize) inSize = back()->Out().size();
 
@@ -74,7 +95,7 @@ Network::Network(std::string mnistLoc)
     }
     
     if(size())
-        ErrFPrime = Volume(back()->Out().size);
+        ErrFRes = Volume(back()->Out().size);
     else
         throw std::invalid_argument("File could not be read!");
 

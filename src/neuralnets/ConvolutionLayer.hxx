@@ -21,8 +21,7 @@ struct ConvLayerDesc
         IpSize(0, 0, 0),
         KernelSize(0, 0),
         KernelStride(0, 0),
-        NumberOfKernels(0),
-        NumOuputs(0) {};
+        NumberOfKernels(0){};
 
     inline ConvLayerDesc(std::string name, std::string actName, Vec::Size3 inSize, Vec::Size2 krSize, Vec::Size2 krStride,
         size_t numKr, size_t numO = 0) :
@@ -31,8 +30,7 @@ struct ConvLayerDesc
         IpSize(inSize),
         KernelSize(krSize),
         KernelStride(krStride),
-        NumberOfKernels(numKr),
-        NumOuputs(numO) {};
+        NumberOfKernels(numKr){};
 
 
 private:
@@ -42,32 +40,24 @@ private:
 
 struct Kernel : public Volume
 {
-    const unsigned Id;
     const Vec::Size2 Stride;  // when stride is 1, max overlap; i.e. windows moves 1pixel 
     double Bias;
 
-    inline Kernel(unsigned id, const ConvLayerDesc& desc, unsigned ipSizeZ) :
+    inline Kernel(const ConvLayerDesc& desc, size_t ipSizeZ) :
         Volume(Vec::Size3(desc.KernelSize.x | 1, desc.KernelSize.y | 1, ipSizeZ)), // odd sizes only
-        Id(id),
         Stride(desc.KernelStride)
     {
-        if (size.x <= Stride.x || size.y <= Stride.y)
-            throw std::invalid_argument("Strides for is larger than size");
-        
         double rs = 1. / sqrt(size());
 
         Bias = CNN_DEBUG ? 0.1 : Utils::URand(-rs, rs);
         for (auto& d : *this) d = CNN_DEBUG ? 0.1 : Utils::URand(-rs, rs);
     }
 
-    inline void Apply(
-        const Volume& IpImage,
-        const Activation* act,
-        Frame Output, Frame LGrads) 
+    inline void Apply( const Volume& IpImage, const Activation* act, Frame Output, Frame LGrads) 
     {
-        for (unsigned y = 0, oy = 0; y < IpImage.size.y; y += Stride.y, ++oy)
-            for (unsigned x = 0, ox = 0; x < IpImage.size.x; x += Stride.x, ++ox)
-                Output.at(oy, ox) = act->Function(IpImage.DotAt(Vec::Loc(x, y), *this) + Bias, LGrads.at(oy, ox));
+        for (size_t y = 0, oy = 0; y < IpImage.size.y; y += Stride.y, ++oy)
+            for (size_t x = 0, ox = 0; x < IpImage.size.x; x += Stride.x, ++ox)
+                Output.at(oy,ox) = act->Function( IpImage.DotAt(Vec::Loc(int(x), int(y)), *this) + Bias, LGrads.at(oy, ox));
     }
 
     inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, double eta)
@@ -78,8 +68,8 @@ struct Kernel : public Volume
 
     inline void GetPGrads(Frame& gradients, Volume& pgrads)
     {
-        for (unsigned gy = 0; gy < gradients.size.y; ++gy)
-            for (unsigned gx = 0; gx < gradients.size.x; ++gx)
+        for (size_t gy = 0; gy < gradients.size.y; ++gy)
+            for (size_t gx = 0; gx < gradients.size.x; ++gx)
             {
                 Vec::Loc3 s = { int(gx * Stride.x - size.x / 2) , int(gy * Stride.y - size.y / 2),0 };
                 auto      e = s, is = s; e += size;
@@ -95,9 +85,8 @@ struct Kernel : public Volume
 
     inline void ChangeWeights(Frame grads, const Volume& ipt, double eta)
     {
-        for3d(size)
-            at(z, y, x) -=
-            ipt(z).DotAt(Vec::Loc(x + grads.size.x / 2 - size.x / 2, y + grads.size.y / 2 - size.y / 2), grads);
+        for3d(size) 
+            at(z, y, x) -= ipt(z).DotAt(Vec::Loc(x + grads.size.x / 2 - size.x / 2, y + grads.size.y / 2 - size.y / 2), grads);
 
         double dB = 0;
         for (auto& g : grads)dB += g;
@@ -112,12 +101,10 @@ struct Kernel : public Volume
     std::ostream& Print(std::ostream& stream)
     {
         //double sum = 0; for (auto& w : *this) sum += w;
-        stream
-            << "Kernel ID: " << Id
-            << " |  Stride: " << Stride
-            << " | Bias: " << Bias
-            << "\nWeights" 
-            << *this;
+        stream  << " |  Stride: " << Stride
+                << " | Bias: " << Bias
+                << "\nWeights" 
+                << *this;
 
         return stream;
     }
@@ -130,7 +117,7 @@ public:
         Layer("ConvLayer-" + desc.Name, desc.IpSize, Kernel::GetOpSize2(desc, prev), desc.Activation, prev)
     {
         for (unsigned i = 0; i < desc.NumberOfKernels; ++i)
-            Kernels.push_back(Kernel(i, desc, Layer::InputSize().z));
+            Kernels.push_back(Kernel(desc, Layer::InputSize().z));
     }
 
     virtual Volume& ForwardPass(Volume& input)
@@ -151,34 +138,36 @@ public:
 
         if (Prev)
         {
+            PGrads.Fill(0.);
             for (unsigned i = 0; i < Kernels.size(); ++i)
                 Kernels[i].BackwardPass(Grads(i), Prev->Out(), PGrads, Eta);
 
+          //  Logging::Log << "backError: " << PGrads;
+
             Prev->BackwardPass(PGrads);
-            PGrads.Fill(0.f);
         }
         else
             for (unsigned i = 0; i < Kernels.size(); ++i)
                 Kernels[i].ChangeWeights(Grads(i), Input, Eta);
-
     }
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
         bool all = printList.find("all") != std::string::npos;
+        
         if (all || printList.find("Summary") != std::string::npos)
-        {
             out << "\n--> Summary for " << Name
                 << "\nInput Size  : " << Input.size
                 << "\nNum Kernels : " << Kernels.size()
                 << "\nKernel Size : " << Kernels[0].size << " | Kernel Stride: " << Kernels[0].Stride
                 << "\nOutput Size : " << Output.size
                 << "\n";
-        }
+        
         if (all || printList.find("Kernels") != std::string::npos)
             for (unsigned i = 0; i < Kernels.size(); ++i)
                 out << "\nKernel " << i << " : " << Kernels[i];
-        if(all || printList.find("full") != std::string::npos)
+        
+        if (all || printList.find("full") != std::string::npos)
             Layer::Print(printList,out);
 
         out.flush();

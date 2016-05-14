@@ -5,6 +5,8 @@
 #include "utils/SimpleMatrix.hxx"
 #include "Activation.hxx"
 
+#include <algorithm>
+
 #ifdef _DEBUG
 #define CNN_DEBUG 1
 #define CNN_PRINT 1
@@ -38,7 +40,7 @@ public:
         else Input.Clear(); // if we alloc'ed Input (i.e. Prev != null), we only need size
     }
 
-    inline const Vec::Size3& InputSize() { return Input.size; }
+    inline virtual const Vec::Size3 InputSize() const { return Input.size; }
 
     virtual Volume& ForwardPass(Volume& input) = 0;
 
@@ -48,10 +50,11 @@ public:
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
-        out << "\nInputs for "      + Name << Input
-        ;out    << "\nPGradients for "  + Name << PGrads << "\n"
-        ;out    << "\nGradients for "   + Name << Grads << "\n"
-        ;out    << "\nLGradients for "  + Name << LGrads << "\n";
+        out << "\nInputs for "      << Name << Input
+            << "\nGradients for "   << Name << Grads
+            << "\nLGradients for "  << Name << LGrads 
+            << "\nPGradients for "  << Name << PGrads
+            << "\nOutputs for "     << Name << Output;
     }
 
     const Activation* GetAct() const { return Act; }
@@ -59,7 +62,27 @@ public:
     const inline Layer* NextLayer() const { return Next; }
     const inline Layer* PrevLayer() const { return Prev; }
     
-    const Volume& Out() { return Output; }
+    const Volume Out() const { return Output; }
+
+    void WeightSanity()    {
+        
+        auto& checkIsMessedUp = [&](Volume& toCheck, std::string name)
+        {
+            for (auto* d = toCheck.begin(); d != toCheck.end(); ++d)
+            {
+                if (isnan(*d) || isinf(*d))
+                {
+                    Logging::Log
+                        << Name << "Infinity or NaN found in  : " << toCheck << " at " << std::distance(toCheck.begin(), d)
+                        << " 3d Idx: " << SimpleMatrix::IndexTo3dIdx(std::distance(toCheck.begin(), d), toCheck.size);
+                    throw std::invalid_argument("Infinity in " + name);
+                }
+            }
+        };
+                   
+        checkIsMessedUp(Grads, "Gradients for " + Name);
+        checkIsMessedUp(Output, "Outputs for " + Name);
+    }
     
     virtual ~Layer() {
         Output.Clear();

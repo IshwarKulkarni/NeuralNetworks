@@ -97,7 +97,7 @@ public:
         for (size_t i = 0; i < Neurons.size(); i++)
             Output[i] = Neurons[i].ForwardPass(input.data[0][0], Act, LGrads[i]);
 
-        //Print("all");
+        Print("Output");
 
         if (Next) return Next->ForwardPass(Output);
         return Output;
@@ -122,19 +122,28 @@ public:
                 Neurons[j].ChangeWeights(Eta, Grads[j], Input);
     }
 
+    inline virtual const Vec::Size3 InputSize() const override {
+        
+        if (Neurons.size())
+            return { Neurons[0].NumWeights(),1,1 };
+        
+        return 0;
+    }
+
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
-
         bool all = printList.find("all") != std::string::npos;
         if (all || printList.find("Summary") != std::string::npos)
-            out 
-            << "\n--> Summary for " << Name 
-            << "\t| " << Act->Name
-            << ",\tInputs : " << (Neurons.size() ? Neurons[0].NumWeights() : 0)
-            << ",\tOutputs: " << Neurons.size()
-            << ",\tEta    : " << Eta << "\n";
+        
+            out
+                << "\n--> Summary for " << Name
+                << "\t| " << Act->Name
+                << ",\tInputs : " << (Neurons.size() ? Neurons[0].NumWeights() : 0)
+                << ",\tOutputs: " << Neurons.size()
+                << ",\tEta    : " << Eta << "\n";
         if (all || printList.find("Neurons") != std::string::npos)
             for (auto& n : Neurons) n.Print(out);
+            
         if (all || printList.find("full") != std::string::npos)
             Layer::Print(printList, out);
         out.flush();
