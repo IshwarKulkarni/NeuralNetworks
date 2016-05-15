@@ -7,12 +7,20 @@
 
 using namespace std;
 
-Network::Network(std::string mnistLoc)
+Network::Network(std::string mnistLoc) :
+    EtaMultiplier(1.0),
+    EtaDecayRate(1.0),
+    SmallTestRate(0),
+    SmallTestSize(0),
+    SmallTestNum(0), 
+    WeightSanityCheck(false), 
+    ErrorFunction(GetErrofFunctionByName("MeanSquareError"))
 {
     std::ifstream inFile(mnistLoc.c_str(), ios::in | ios::binary);
     if (!inFile.good())
         throw std::invalid_argument(("File to read network config from is unavailable to read from: " + mnistLoc).c_str());
 
+    bool networkDescribed = false;
     char buffer[256];
     while (inFile && inFile.getline(buffer, 256))
     {
@@ -21,7 +29,28 @@ Network::Network(std::string mnistLoc)
         if (line.length() == 0 || line[0] == '#')
             continue;
 
-        if (StringUtils::beginsWith(line, "->ConvLayer"))
+        if (StringUtils::beginsWith(line, "->NetworkDescription"))
+        {
+            if (networkDescribed)
+                throw std::invalid_argument("You can describe network only once");
+
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndNetworkDescription");
+
+            nvpp.Get("EtaMultiplier", EtaMultiplier);
+            nvpp.Get("EtaDecayRate",  EtaDecayRate);
+            nvpp.Get("SmallTestRate", SmallTestRate);
+            nvpp.Get("SmallTestSize", SmallTestSize);
+            nvpp.Get("SmallTestNum",  SmallTestNum);
+            nvpp.Get("WeightSanityCheck", WeightSanityCheck);
+
+            std::string errfName = "MeanSquareError";
+            nvpp.Get("ErrorFunction", errfName);
+            if ((ErrorFunction = GetErrofFunctionByName(errfName)) == nullptr)
+                throw std::invalid_argument("Cannot find Error function by name: " + errfName);
+
+            networkDescribed = true;
+        }
+        else if (StringUtils::beginsWith(line, "->ConvLayer"))
         {
             std::string last;
             while (inFile && last != "true")
@@ -94,12 +123,15 @@ Network::Network(std::string mnistLoc)
         }
     }
     
-    if(size())
+    if (size())
+    {
         ErrFRes = Volume(back()->Out().size);
+        for (auto* l : *this) l->GetEta() *= EtaMultiplier;
+    }
     else
         throw std::invalid_argument("File could not be read!");
 
     Sanity();
 
-    Print("Summary");
+    Print("Network & Summary");
 }

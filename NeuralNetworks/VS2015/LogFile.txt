@@ -1,0 +1,44 @@
+Session Logging Started At : Sat, 14-05-2016, 23:08:22 
+Session Type:  Release
+"MNIST2 data load" Ended at Sat, 14-05-2016, 23:08:22 . Duration was 0.226411 seconds.
+
+Data set summary:
+# Training Patterns   : 54000
+# Testing Patterns    : 3000
+# Validation Patterns : 3000
+# Target classes      : 10
+Target Pattern type   : Unary, with length 10 {1, 0}
+
+=============================================
+Printing network for printList: "Network & Summary"
+
+Netowrk Description: 
+EtaMultiplier : 0.01
+ErrorFunction : MeanSquareError
+EtaDecayRate  : 1
+SmallTestRate : 0
+SmallTestSize : 0
+EtaDecayRate  : 1
+WeightSanityCheck : false
+
+--> Summary for ConvLayer-Input<1>	| Sigmoid	| Eta: 0.0001
+Input Size  : [28, 28, 1]
+Num Kernels : 6
+Kernel Size : [5, 5, 1] | Kernel Stride: [2, 2]
+Output Size : [14, 14, 6]
+
+--> Summary for ConvLayer-Input<2>	| Sigmoid	| Eta: 0.0001
+Input Size  : [14, 14, 6]
+Num Kernels : 4
+Kernel Size : [3, 3, 6] | Kernel Stride: [2, 2]
+Output Size : [7, 7, 4]
+
+--> Summary for ConvLayer-Mid<3>	| TanH	| Eta: 1e-05
+Input Size  : [7, 7, 4]
+Num Kernels : 2
+Kernel Size : [5, 5, 4] | Kernel Stride: [2, 2]
+Output Size : [4, 4, 2]
+
+--> Summary for FCLayer-Out <4>	| Sigmoid	| Eta: 0.0001,	Inputs : 32,	Outputs: 10,	Eta    : 0.0001
+===================================================
+

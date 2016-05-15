@@ -1,0 +1,4 @@
+Session Logging Started At : Sat, 14-05-2016, 16:03:03 
+Session Type:  Release
+"MNIST2 data load" Ended at Sat, 14-05-2016, 16:03:03 . Duration was 0.000204152 seconds.
+All MNIST files could not be opened from given location: ..\..\data\MNIST/

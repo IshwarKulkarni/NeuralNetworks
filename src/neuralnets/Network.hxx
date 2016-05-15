@@ -4,84 +4,65 @@
 #include <numeric>
 #include <fstream>
 #include <vector>
+#include <memory>
 
 #include "Layer.hxx"
 #include "utils/SimpleMatrix.hxx"
 #include "data/DataSets.hxx"
+#include "ErrorFunctions.hxx"
 
 typedef SimpleMatrix::Matrix3<double> Volume;
 typedef SimpleMatrix::Matrix<double> Frame;
 
-struct ErrorFunctionType {
-    virtual void Prime(const Volume& out, const double* target, Volume& res) const = 0;
-    virtual void operator()(const Volume& out, const double* target, Volume& res) const = 0;
-};
-
-struct MeanSquareErrorType : public ErrorFunctionType
-{
-    virtual void Prime(const Volume& out, const double* target, Volume& res) const override
-    {
-        for (size_t i = 0; i < out.size(); ++i)
-            res[i] = out[i] - target[i];
-    }
-    virtual void operator()(const Volume& out, const double* target, Volume& res) const override
-    {
-        for (size_t i = 0; i < out.size(); ++i)
-        {
-            double r = target[i] - out[i];
-            res[i] = 0.5 * r*r;
-        }
-    }
-};
-
 class Network : public std::vector<Layer*>
 {
     Volume ErrFRes;
-    const ErrorFunctionType& ErrFunc = MeanSquareErrorType();
+    double  EtaMultiplier;
+    double  EtaDecayRate;
+    size_t  SmallTestRate; // Perform Small Tests while training, after these many training sets
+    size_t  SmallTestSize; // Size of such small tests.
+    size_t  SmallTestNum;  // number of such tests done.
+
+    bool WeightSanityCheck; 
+
+    std::shared_ptr<ErrorFunctionType> ErrorFunction;
 
 public:
 
     Network(std::string inFile);
     
-    Network(unsigned outSize) {
-        ErrFRes = Volume({ outSize, 1,1 });
-    }
-
     template<typename TrainIter>
-    inline void Train(TrainIter begin, TrainIter end, double smallTestAfterFrac = 0.1, double smallTestSizeFrac = 0.005)
+    inline void Train(TrainIter begin, TrainIter end)
     {
         Volume In = { front()->InputSize(), nullptr };
         
         NumTrainInEpoc = std::distance(begin, end);
 
-        size_t smallTestAfter = size_t(NumTrainInEpoc * smallTestAfterFrac );
-        size_t smallTestSize  = size_t(NumTrainInEpoc * smallTestSizeFrac);
-        size_t smallTestNum = 0;
+        auto iter = begin-1; size_t numTrain = 0;
 
-        auto iter = begin; size_t numTrain = 0;
-
-        while(iter != end)
+        while(++iter != end)
         {
             In.data = iter->Input;
             
-            ErrFunc.Prime(front()->ForwardPass(In), iter->Target, ErrFRes);
+            ErrorFunction->Prime(front()->ForwardPass(In), iter->Target, ErrFRes);
             
             back()->BackwardPass(ErrFRes);
+            if (SmallTestRate && numTrain % SmallTestRate == 0) SmallTest(begin, NumTrainInEpoc);
 
-            if (numTrain && smallTestAfter && numTrain % smallTestAfter == 0) // after every 10%, test with 1% samples
-            {
-                size_t randOffset = Utils::URand(NumTrainInEpoc - smallTestSize);
-                auto smallTestStart = begin + randOffset;
-                Logging::Log << "Small test " << smallTestNum++;
-                Test(smallTestStart, smallTestStart + smallTestSize);
-                auto res = Results(); 
-                Logging::Log << "\tAcc:\t" << res.first * 100 << "% Error:\t" << res.second << "\n" << Logging::Log.flush;
-            }
-
-            iter++;
             numTrain++;
         }
-        //for (auto& l : *this) l->WeightDecay(DecayRate);
+        for (auto& l : *this) l->WeightDecay(DecayRate); 
+    }
+
+    template<typename TestIter>
+    inline void SmallTest(TestIter begin, size_t numTrainInEpoc)
+    {
+        auto smallTestStart = begin + Utils::URand(numTrainInEpoc - SmallTestSize);
+
+        Logging::Log << "Small test " << SmallTestNum++;
+        Test(smallTestStart, smallTestStart + SmallTestSize);
+        auto res = Results();
+        Logging::Log << "\tAcc:\t" << res.first * 100 << "% Error:\t" << res.second << "\n" << Logging::Log.flush;
     }
     
     template<typename TestIter>
@@ -99,7 +80,7 @@ public:
             const auto& out = front()->ForwardPass(In);
 
             NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
-            ErrFunc(out, iter->Target, ErrFRes);
+            ErrorFunction->Apply(out, iter->Target, ErrFRes);
             VldnRMSE += std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
 
             iter++;
@@ -114,6 +95,21 @@ public:
     inline void Print(std::string printList, std::ostream &out = Logging::Log)
     {
         out << "Printing network for printList: \"" << printList << "\"\n";
+        if (printList.find("Network") != std::string::npos)
+        {
+            out << std::boolalpha
+                << "\nNetowrk Description: "
+                << "\nEtaMultiplier : " << EtaMultiplier
+                << "\nErrorFunction : " << ErrorFunction->Name()
+                << "\nEtaDecayRate  : " << EtaDecayRate
+                << "\nSmallTestRate : " << SmallTestRate
+                << "\nSmallTestSize : " << SmallTestSize
+                << "\nEtaDecayRate  : " << EtaDecayRate
+                << "\nWeightSanityCheck : " << WeightSanityCheck
+                << "\n";
+                
+        }
+
         const Layer* l = front();
         do { l->Print(printList, out);  }while ((l = l->NextLayer()) != nullptr);
         out << "===================================================\n\n"; out.flush();
@@ -153,14 +149,14 @@ public:
         return std::make_pair(NumValCorrect / NumVal , VldnRMSE / NumVal);
     }
 
-    ~Network(){ for (auto& l : *this) delete l; }
+    ~Network() { for (auto& l : *this) delete l; }
 
 
 private:
 
     unsigned NumVal, NumTrainInEpoc;
     double NumValCorrect, VldnRMSE;
-    const double DecayRate = 0.95;
+    double DecayRate;
 
 };
 

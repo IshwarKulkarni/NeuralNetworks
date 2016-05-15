@@ -47,6 +47,9 @@
     <ClInclude Include="..\..\src\neuralnets\AveragePoolingLayer.hxx">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\ErrorFunctions.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\data\MNIST_Network.config">

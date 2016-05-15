@@ -156,6 +156,7 @@
     <ClInclude Include="..\..\src\neuralnets\Activation.hxx" />
     <ClInclude Include="..\..\src\neuralnets\AveragePoolingLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\ConvolutionLayer.hxx" />
+    <ClInclude Include="..\..\src\neuralnets\ErrorFunctions.hxx" />
     <ClInclude Include="..\..\src\neuralnets\FullyConnectedLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\Layer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\Network.hxx" />

@@ -6,25 +6,10 @@
 using namespace std;
 using namespace Logging;
 
-void ManualInitNetwork(Network& nn)
-{
-    Vec::Size3 MNISTDataSize = { MNISTReader::ImW, MNISTReader::ImH, 1 };
-    nn.push_back(new ConvolutionLayer(ConvLayerDesc("Input",    "Sigmoid", MNISTDataSize, { 5, 5 }, { 1,1 }, 4), nullptr));
-    nn.push_back(new AveragePoolingLayer(AvgPooLayerDesc("Avg1", "Sigmoid", { 2, 2 }), nn.back()));
-    nn.push_back(new ConvolutionLayer(ConvLayerDesc("Middle",   "Sigmoid", Vec::Zeroes3, { 5, 5 }, { 2,2 }, 2), nn.back()));
-    nn.push_back(new ConvolutionLayer(ConvLayerDesc("LastFC",   "Sigmoid", Vec::Zeroes3, { 5, 5 }, { 3,3 }, 1), nn.back()));
-
-    nn.push_back(new FullyConnectedLayer("FCIn", 0, 25, "Sigmoid", nn.back()));
-    nn.push_back(new FullyConnectedLayer("FCIn", 50, 25, "Sigmoid", nn.back()));
-
-    nn.push_back(new FullyConnectedLayer("Out",  25, 10, "Sigmoid", nn.back()));
-}
-
 int main()
 {
     try
     {
-
         Vec::Size3 in;; unsigned out;
         cout << "Reading data..." << endl;
         auto data = LoadMnistData2(in, out);

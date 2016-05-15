@@ -47,6 +47,7 @@ public:
     virtual void BackwardPass(Volume& backError) = 0;
 
     virtual void WeightDecay(double decayRate) { Eta *= decayRate; }
+    virtual double& GetEta() { return Eta; }
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
