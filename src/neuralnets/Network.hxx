@@ -1,6 +1,7 @@
 #ifndef __NETWORK_INCLUDED__
 #define __NETWORK_INCLUDED__
 
+#include <numeric>
 #include <fstream>
 #include <vector>
 
@@ -47,24 +48,40 @@ public:
     }
 
     template<typename TrainIter>
-    inline void Train(TrainIter begin, TrainIter end)
+    inline void Train(TrainIter begin, TrainIter end, double smallTestAfterFrac = 0.1, double smallTestSizeFrac = 0.005)
     {
         Volume In = { front()->InputSize(), nullptr };
-        NumTrainInEpoc = 0;
-        while( begin != end && ++NumTrainInEpoc && begin->Input) 
+        
+        NumTrainInEpoc = std::distance(begin, end);
+
+        size_t smallTestAfter = size_t(NumTrainInEpoc * smallTestAfterFrac );
+        size_t smallTestSize  = size_t(NumTrainInEpoc * smallTestSizeFrac);
+        size_t smallTestNum = 0;
+
+        auto iter = begin; size_t numTrain = 0;
+
+        while(iter != end)
         {
-            In.data = begin->Input;
+            In.data = iter->Input;
             
-            ErrFunc.Prime(front()->ForwardPass(In), begin->Target, ErrFRes);
+            ErrFunc.Prime(front()->ForwardPass(In), iter->Target, ErrFRes);
             
             back()->BackwardPass(ErrFRes);
 
-            begin++;
-            
-            if (NumTrainInEpoc % 100 == 0)
-                for (auto& l : *this) l->WeightSanity();
+            if (numTrain && smallTestAfter && numTrain % smallTestAfter == 0) // after every 10%, test with 1% samples
+            {
+                size_t randOffset = Utils::URand(NumTrainInEpoc - smallTestSize);
+                auto smallTestStart = begin + randOffset;
+                Logging::Log << "Small test " << smallTestNum++;
+                Test(smallTestStart, smallTestStart + smallTestSize);
+                auto res = Results(); 
+                Logging::Log << "\tAcc:\t" << res.first * 100 << "% Error:\t" << res.second << "\n" << Logging::Log.flush;
+            }
+
+            iter++;
+            numTrain++;
         }
-        for (auto& l : *this) l->WeightDecay(DecayRate);
+        //for (auto& l : *this) l->WeightDecay(DecayRate);
     }
     
     template<typename TestIter>
@@ -73,13 +90,22 @@ public:
         NumValCorrect = 0; NumVal = 0; VldnRMSE = 0;
         auto& pred = back()->GetAct()->ResultCmpPredicate;
         Volume In = { front()->InputSize(), nullptr };
-        while (begin++ != end &&  ++NumVal)
+
+        auto iter = begin; size_t numTest = 0;
+
+        while (iter != end)
         {
-            In.data = begin->Input;
+            In.data = iter->Input;
             const auto& out = front()->ForwardPass(In);
 
-            NumValCorrect += std::equal(out.begin(), out.end(), begin->Target, pred);
+            NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
+            ErrFunc(out, iter->Target, ErrFRes);
+            VldnRMSE += std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
+
+            iter++;
+            numTest++;
         }
+        NumVal = numTest;
         return NumValCorrect / NumVal;
     }
 
@@ -90,7 +116,7 @@ public:
         out << "Printing network for printList: \"" << printList << "\"\n";
         const Layer* l = front();
         do { l->Print(printList, out);  }while ((l = l->NextLayer()) != nullptr);
-        out << "===================================================\n"; out.flush();
+        out << "===================================================\n\n"; out.flush();
     }
 
     inline void Sanity()
@@ -124,7 +150,7 @@ public:
     }
 
     inline std::pair<double, double> Results() {
-        return std::make_pair( 0,0 );
+        return std::make_pair(NumValCorrect / NumVal , VldnRMSE / NumVal);
     }
 
     ~Network(){ for (auto& l : *this) delete l; }

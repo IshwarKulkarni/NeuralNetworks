@@ -135,9 +135,7 @@ public:
         bool all = printList.find("all") != std::string::npos;
         if (all || printList.find("Summary") != std::string::npos)
         
-            out
-                << "\n--> Summary for " << Name
-                << "\t| " << Act->Name
+            out << "\n--> Summary for " << Name << "\t| " << Act->Name << "\t| Eta: " << Eta
                 << ",\tInputs : " << (Neurons.size() ? Neurons[0].NumWeights() : 0)
                 << ",\tOutputs: " << Neurons.size()
                 << ",\tEta    : " << Eta << "\n";

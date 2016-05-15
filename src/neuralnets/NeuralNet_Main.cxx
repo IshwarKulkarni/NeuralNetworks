@@ -32,6 +32,7 @@ int main()
 
         cout << "Building network..." << endl;
         Network nn(DATA_LOCATION "MNIST_Network.config");
+        //Network nn(DATA_LOCATION "comparetcnn1.txt");
         auto& highLow = nn.GetOutputHiLo();
         data.ResetHighLow(highLow.first, highLow.second);
 
