@@ -31,66 +31,64 @@ public:
 
     Network(std::string inFile);
     
-    template<typename TrainIter>
-    inline void Train(TrainIter begin, TrainIter end)
+    template<typename TrainIter,typename InputTxType>
+    inline void Train(TrainIter begin, TrainIter end, InputTxType& inputTx)
     {
-        Volume In = { front()->InputSize(), nullptr };
+        Volume In = front()->InputSize(); // implicit
         
         NumTrainInEpoc = std::distance(begin, end);
 
-        auto iter = begin-1; size_t numTrain = 0;
+        size_t numTrain = 0;
 
-        while(++iter != end)
+        for (auto iter = begin; iter != end; ++iter, ++numTrain)
         {
-            In.data = iter->Input;
+            inputTx(iter->Input, In);
             
             ErrorFunction->Prime(front()->ForwardPass(In), iter->Target, ErrFRes);
             
             back()->BackwardPass(ErrFRes);
-            if (SmallTestRate && numTrain % SmallTestRate == 0) SmallTest(begin, NumTrainInEpoc);
 
-            numTrain++;
+            if (SmallTestRate && numTrain % SmallTestRate == 0) 
+                SmallTest(begin, NumTrainInEpoc, inputTx);
+
         }
         for (auto& l : *this) l->WeightDecay(DecayRate); 
     }
 
-    template<typename TestIter>
-    inline void SmallTest(TestIter begin, size_t numTrainInEpoc)
+    template<typename TestIter,typename InputTxType>
+    inline void SmallTest(TestIter begin, size_t numTrainInEpoc, InputTxType& inputTx)
     {
         auto smallTestStart = begin + Utils::URand(numTrainInEpoc - SmallTestSize);
 
         Logging::Log << "Small test " << SmallTestNum++;
-        Test(smallTestStart, smallTestStart + SmallTestSize);
+        Test(smallTestStart, smallTestStart + SmallTestSize,inputTx);
         auto res = Results();
-        Logging::Log << "\tAcc:\t" << res.first * 100 << "% Error:\t" << res.second << "\n" << Logging::Log.flush;
+        Logging::Log << "\tAcc:\t" << res.x * 100 << "% Error:\t" << res.y << "\n" << Logging::Log.flush;
     }
     
-    template<typename TestIter>
-    inline double Test(TestIter begin, TestIter end)
+    template<typename TestIter, typename InputTxType>
+    inline double Test(TestIter begin, TestIter end, InputTxType& inputTx)
     {
         NumValCorrect = 0; NumVal = 0; VldnRMSE = 0;
         auto& pred = back()->GetAct()->ResultCmpPredicate;
         Volume In = { front()->InputSize(), nullptr };
 
-        auto iter = begin; size_t numTest = 0;
+        size_t numTest = 0;
 
-        while (iter != end)
+        for (auto iter = begin; iter != end; ++iter, ++numTest)
         {
-            In.data = iter->Input;
+            inputTx(iter->Input, In);
             const auto& out = front()->ForwardPass(In);
 
             NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
             ErrorFunction->Apply(out, iter->Target, ErrFRes);
             VldnRMSE += std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
-
-            iter++;
-            numTest++;
         }
         NumVal = numTest;
         return NumValCorrect / NumVal;
     }
 
-    inline const std::pair<double, double>& GetOutputHiLo() const { return back()->GetAct()->MinMax; }
+    inline const Vec::Vec2<double>& GetOutputHiLo() const { return back()->GetAct()->MinMax; }
 
     inline void Print(std::string printList, std::ostream &out = Logging::Log)
     {
@@ -145,8 +143,8 @@ public:
 
     }
 
-    inline std::pair<double, double> Results() {
-        return std::make_pair(NumValCorrect / NumVal , VldnRMSE / NumVal);
+    inline Vec::Vec2<double> Results() {
+        return{ NumValCorrect / NumVal , VldnRMSE / NumVal };
     }
 
     ~Network() { for (auto& l : *this) delete l; }

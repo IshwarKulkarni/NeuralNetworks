@@ -6,6 +6,8 @@
 #include <vector>
 #include <string>
 
+#define MNISTTHandWriting   "MNIST/"
+
 class MNISTReader
 {
 public:

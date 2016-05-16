@@ -8,7 +8,7 @@
 #include "utils/Vec23.hxx"
 #include "utils/SimpleMatrix.hxx"
 #include "data/MINST-ImageReader.hxx"
-
+#include "data/CIFAR-ImageReader.hxx"
 
 struct TargetPatternDef
 {
@@ -23,9 +23,10 @@ struct TargetPatternDef
     unsigned    TargetVectorSize;
     TargetOutputType TargetType;
 
-    TargetPatternDef(unsigned numTargetClasses = 0, TargetOutputType type = UseBinaryArray) :
-        FillHigh(1),
-        FillLow(-1),
+    TargetPatternDef(unsigned numTargetClasses = 0, TargetOutputType type = UseBinaryArray, 
+        double fillLo = 0, double fillHi = 1) :
+        FillLow(fillLo),
+        FillHigh(fillHi),
         NumTargetClasses(numTargetClasses),
         TargetVectorSize(0),        
         TargetType(type){}
@@ -211,7 +212,9 @@ private:
 
 extern void  ReadDataSplitsFromFile();
 
-PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize);
+PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize); // one dimension output
 
-PatternSet<double***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, unsigned N = MNISTReader::NumImages);
+PatternSet<double***> LoadMnistData2(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = MNISTReader::NumImages);
+
+PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = CIFAR::NumImages);
 #endif

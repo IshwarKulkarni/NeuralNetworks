@@ -4,21 +4,15 @@
 #include "utils/SimpleMatrix.hxx"
 #include <fstream>
 
-#define MNISTTHandWriting   "MNIST/"
-#define UCIWineData         "uci-winedata//wine.csv"
-#define UCIHandWriting2     "handwriting//letter-recognition-2.csv"
-#define OpticalDigits       "UCI-Handwriting//optdigits.all.csv"
-
-
 #define DATA_SPLIT_FILENAME "DataSplits.txt"
 
 using namespace std;
 using namespace Vec;
 using namespace SimpleMatrix;
+using namespace CIFAR;
 
 double VldnFraction = 0.05f;
 double TestFraction = 0.05f;
-
 
 PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize)
 {
@@ -53,16 +47,13 @@ PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize)
     return data;
 }
 
-PatternSet<double***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, unsigned N)
+PatternSet<double***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
 {
     Logging::Timer timer("MNIST2 data load");
     
     InputSize = { MNISTReader::ImW, MNISTReader::ImH, 1 };
-    TargetPatternDef targetPattern(10);
-    targetPattern.NumTargetClasses = 10;
-    targetPattern.FillLow = 0;
-    targetPattern.FillHigh = 1;
-    targetPattern.TargetType = TargetPatternDef::UseUnaryArray;
+    TargetPatternDef targetPattern(10, TargetPatternDef::UseUnaryArray, highlo[0], highlo[1]);
+
     PatternSet<double***> data(N, VldnFraction, TestFraction, targetPattern);
     OutputSize = targetPattern.TargetVectorSize;
 
@@ -83,7 +74,37 @@ PatternSet<double***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize
     delete[] images2D[0][0];
     delete[] images2D[0];
     delete[] images2D;
-
+#ifndef _DEBUG
+    data.ShuffleAll();
+#endif
     data.SetDataToDelete(images2Df);
+    return data;
+}
+
+PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
+{
+    Logging::Timer timer("CIFAR10 data load");
+
+    InputSize = {CIFAR::ImW, CIFAR::ImH, CIFAR::ImD};
+
+    TargetPatternDef targetPattern(10, TargetPatternDef::UseUnaryArray, highlo[0], highlo[1]);
+    PatternSet<unsigned  char***> data(N, VldnFraction, TestFraction, targetPattern);
+    OutputSize = targetPattern.TargetVectorSize;
+
+    CIFARReader imageReader;
+    auto allImages = imageReader.ImageDataCopy(N);
+    imageReader.TestCIFARReader();
+
+    for (unsigned i = 0; i < N; ++i)
+        data[i].Input = allImages.first + i*CIFAR::ImD,
+        data[i].Target = data.GetTarget(allImages.second[i]);
+
+
+
+#ifndef _DEBUG
+    data.ShuffleAll();
+#endif
+    delete[] allImages.second;
+    data.SetDataToDelete(allImages.first);
     return data;
 }

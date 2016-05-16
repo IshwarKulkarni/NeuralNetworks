@@ -31,14 +31,14 @@ struct Activation
     ActivationFunction Function;
     ResultCmpPredicateType ResultCmpPredicate;
     double Eta;
-    std::pair<double, double> MinMax;
+    Vec::Vec2<double> MinMax;
 };
 
 inline Activation* GetActivationByName(std::string name)
 {
     static Activation List[] = {
-        {"Sigmoid", SigmoidActivation, Utils::RoundedCompare,  0.01, { 0, 1} },
-        {"TanH",    TanHActivation,    Utils::SameSign,        0.001, {-1, 1} }
+        {"Sigmoid", SigmoidActivation, Utils::RoundedCompare,  0.1, { 0, 1} },
+        {"TanH",    TanHActivation,    Utils::SameSign,        0.01, {-1, 1} }
     };
 
     for (unsigned i = 0; i < ARRAY_LENGTH(List); ++i)

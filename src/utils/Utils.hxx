@@ -25,6 +25,9 @@
 
 namespace Utils
 {
+    template<typename T> T Identity(T t) { return t; }
+    template<typename T, typename U> T Identity(T t, U u) { return t = u; }
+
     inline bool RoundedCompare(double d1, double d2)
     {
         return int(d1 + 0.5) == int(d2 + 0.5);
@@ -53,6 +56,12 @@ namespace Utils
     {
         return (T)(low + distribution(Generator)*(high - low) / 100.0);
     }
+}
+
+namespace PPMIO
+{
+    extern void Write(std::string name, size_t width, size_t height, size_t numComps, const unsigned char* frames, bool interleaved = true);
+    extern unsigned char* Read(std::string name, size_t& width, size_t& height, size_t& components);
 }
 
 namespace StringUtils
@@ -115,6 +124,57 @@ namespace StringUtils
         std::stringstream(str) >> v;
         return v;
     }
+
+    inline std::string ToUpper(const std::string& cstr)
+    {
+        std::string str(cstr);
+        std::transform(str.begin(), str.end(), str.begin(), toupper);
+        return str;
+    }
+
+    inline std::string ToLower(const std::string& cstr)
+    {
+        std::string str(cstr);
+        std::transform(str.begin(), str.end(), str.begin(), tolower);
+        return str;
+    }
+
+    inline void ToUpper(std::string& str)
+    {
+        std::transform(str.begin(), str.end(), str.begin(), toupper);
+    }
+
+    inline void ToLower(std::string& str)
+    {
+        std::transform(str.begin(), str.end(), str.begin(), tolower);
+    }
+
+
+    inline bool endsWith(const std::string& str, const std::string& ends, bool matchcase = false)
+    {
+        if (str.length() < ends.length()) return false;
+        return matchcase ?
+            std::string(str.end() - ends.length(), str.end()) == ends :
+            ToUpper(std::string(str.end() - ends.length(), str.end())) == ToUpper(std::string(ends));
+    }
+
+    inline void establishEndsWith(std::string& str, const std::string& ends, bool matchcase = false)
+    {
+        if (!endsWith(str, ends, matchcase))
+            str += ends;
+    }
+
+    inline std::string establishEndsWith(const char* cstr, const std::string& ends, bool matchcase = false)
+    {
+        if (!cstr || ends.length() == 0)
+            return std::string("");
+        std::string str(cstr);
+        if (!endsWith(str, ends, matchcase))
+            str += ends;
+
+        return str;
+    }
+
 }
 
 namespace Logging

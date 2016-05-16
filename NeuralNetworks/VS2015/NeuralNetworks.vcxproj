@@ -151,8 +151,10 @@
     <ClCompile Include="..\..\src\data\MINST-ImageReader.cxx" />
     <ClCompile Include="..\..\src\neuralnets\Network.cxx" />
     <ClCompile Include="..\..\src\neuralnets\NeuralNet_Main.cxx" />
+    <ClCompile Include="..\..\src\utils\PPMIO.cxx" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\data\CIFAR-ImageReader.hxx" />
     <ClInclude Include="..\..\src\neuralnets\Activation.hxx" />
     <ClInclude Include="..\..\src\neuralnets\AveragePoolingLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\ConvolutionLayer.hxx" />

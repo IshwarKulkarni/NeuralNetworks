@@ -118,19 +118,17 @@ Network::Network(std::string mnistLoc) :
 
                 if (!inSize) inSize = back()->Out().size();
 
-                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, back()));
+                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, size() ? back() :nullptr));
             }
         }
     }
     
-    if (size())
-    {
-        ErrFRes = Volume(back()->Out().size);
-        for (auto* l : *this) l->GetEta() *= EtaMultiplier;
-    }
-    else
-        throw std::invalid_argument("File could not be read!");
-
+    if (!size() )throw std::invalid_argument("File could not be read!");
+    
+    ErrFRes = Volume(back()->Out().size);
+    
+    for (auto* l : *this) l->GetEta() *= EtaMultiplier;
+    
     Sanity();
 
     Print("Network & Summary");

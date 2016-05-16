@@ -5,6 +5,7 @@
 
 using namespace std;
 using namespace Logging;
+using namespace SimpleMatrix;
 
 int main()
 {
@@ -12,14 +13,12 @@ int main()
     {
         Vec::Size3 in;; unsigned out;
         cout << "Reading data..." << endl;
-        auto data = LoadMnistData2(in, out);
-        data.Summarize(Log, false);
-
+        
         cout << "Building network..." << endl;
-        Network nn(DATA_LOCATION "MNIST_Network.config");
-        //Network nn(DATA_LOCATION "comparetcnn1.txt");
-        auto& highLow = nn.GetOutputHiLo();
-        data.ResetHighLow(highLow.first, highLow.second);
+        Network nn(DATA_LOCATION "CIFAR_Network.config");
+        
+        auto data = LoadCifarData10(in, out, nn.GetOutputHiLo());
+        data.Summarize(Log, false);
 
         cout << endl << "Starting training... " << endl;
 
@@ -27,15 +26,25 @@ int main()
 
         unsigned maxEpochs = 20;
         double   targetAcc = 0.95, acc = 0.;
+        
+        auto char255ToDouble = [&](unsigned char*** in, Matrix3<double> out){
+            for (size_t i = 0; i < out.size(); ++i)
+                out[i] = double(in[0][0][i]) / 255;
+        };
+
+
         for (size_t i = 0; i < maxEpochs && acc < targetAcc; i++)
         {
             epochTime.TimeFromLastCheck();
-            nn.Train(data.TrainBegin(), data.TrainEnd());
+            
+            nn.Train(data.TrainBegin(), data.TrainEnd() , char255ToDouble );
             double lastCheck = epochTime.TimeFromLastCheck();
-            cout << "Train Epoch " << i << ">  "
-                << "[" << lastCheck << "s]:\t"
-                << "Validation Accuracy : " << (acc = nn.Test(data.VldnBegin(), data.VldnEnd())) * 100 << "%"
-                << endl;
+            
+            nn.Test(data.VldnBegin(), data.VldnEnd(), char255ToDouble);
+            auto res = nn.Results(); acc = res.x;
+
+            cout << "Train Epoch " << i << "> [" << lastCheck << "s]:\tAccuracy: "
+                 << res.x * 100 << "%,\t Mean Error: " << res.y << endl;
         }
 
     }
