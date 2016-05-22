@@ -16,37 +16,35 @@ namespace CIFAR
     static const size_t NumImagesPerOrigFile = 10000;
     static const size_t NumImages = 60000;
 
+    static const char* ClassNames[10] ={   
+        "airplane", "automobile", "bird", "cat", "deer",
+        "dog", "frog", "horse", "ship", "truck" };
+    static const char* CIFARBinImages[6] = {
+        "data_batch_1.bin", "data_batch_2.bin", "data_batch_3.bin",
+        "data_batch_4.bin", "data_batch_5.bin", "test_batch.bin" };
     struct CIFARReader
     {
 
     private:
 
-        const std::vector<std::string> CIFARBinImages = { "data_batch_1.bin", "data_batch_2.bin", "data_batch_3.bin",  
-                                                          "data_batch_4.bin", "data_batch_5.bin", "test_batch.bin" };
-
-        const std::string  CIFARImageLocation = "cifar-10-batches-bin\\";
-
-        std::string DataLocation;
+        const std::string CIFARImageLocation = "cifar-10-batches-bin\\", DataLocation;
 
     public:
 
-        const std::string ClassNames[10] = {  "airplane", "automobile",   "bird", "cat",  "deer",
-                                              "dog",      "frog",         "horse","ship", "truck" };
 
         CIFARReader(std::string dataLocation = DATA_LOCATION) : DataLocation(dataLocation) {};
 
         // Returns a Volume(ImW,ImH,ImD*N), where ith frame is (i%ImD)th channel of (Floor(i/ImD))th image
         // Not a fourD image.
-        inline std::pair<unsigned char***, char*> ImageDataCopy(size_t N = NumImages)
+        inline std::pair<unsigned char***, unsigned char*> ImageDataCopy(size_t N = NumImages)
         {
             if (N > NumImages)
-                throw std::invalid_argument("Offset and number of images cannot be accomodated");
+                throw std::invalid_argument("Offset and number of images cannot be accommodated");
 
-            Vec::Size3 allimages(ImW, ImH, N * ImD); 
-            auto images = SimpleMatrix::ColocAlloc<unsigned char>(allimages); // [0-1] scaled version of images
+            auto images = SimpleMatrix::ColocAlloc<char>({ImW, ImH, N * ImD});
 
             size_t numRead = 0;
-            auto labels = new unsigned char[N];
+            auto labels = new char[N];
 
             for (auto& binImgName : CIFARBinImages)
             {
@@ -58,14 +56,14 @@ namespace CIFAR
 
                 for (size_t binIm = 0; binIm < imFromThisBin; ++binIm, ++numRead)
                 {
-                    inFile.read((char*)(labels + numRead), 1);
-                    inFile.read((char*)(images[numRead][0]), ImageSizeLin).gcount(); // +1 for the label
+                    inFile.read(labels + numRead, 1);
+                    inFile.read(images[numRead*ImD][0], ImageSizeLin); // +1 for the label
                 }
 
                 if (imFromThisBin < NumImagesPerOrigFile) break; // we read  all images except from last file/
             }
 
-            return std::make_pair(images, (char*)(labels));
+            return std::make_pair((unsigned char***)images, (unsigned char*)labels);
         }
 
         void TestCIFARReader(size_t N = 100)
@@ -75,10 +73,10 @@ namespace CIFAR
 
             for (size_t i = 0; i < N; ++i)
             {
-                size_t rand = Utils::URand(NumImages);
+                size_t rand = i <=16 ? i :  Utils::URand(NumImages);
 
-                unsigned char** imPtrPtr = imSet.first[rand];
-                PPMIO::Write(std::to_string(i) + "_" + ClassNames[imSet.second[rand]],  ImW, ImH, ImD, *imPtrPtr, false);
+                PPMIO::Write(std::to_string(i) + "_" + std::to_string(rand) + "_" + ClassNames[imSet.second[rand]],
+                    ImW, ImH, ImD, (unsigned char*)(imSet.first[rand*ImD][0]), false);
                 
             }
 

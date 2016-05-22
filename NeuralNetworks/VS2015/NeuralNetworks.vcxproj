@@ -148,7 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\data\DataSets.cxx" />
-    <ClCompile Include="..\..\src\data\MINST-ImageReader.cxx" />
+    <ClCompile Include="..\..\src\data\MNIST-ImageReader.cxx" />
     <ClCompile Include="..\..\src\neuralnets\Network.cxx" />
     <ClCompile Include="..\..\src\neuralnets\NeuralNet_Main.cxx" />
     <ClCompile Include="..\..\src\utils\PPMIO.cxx" />

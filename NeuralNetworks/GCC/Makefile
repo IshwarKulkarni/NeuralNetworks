@@ -1,5 +1,5 @@
 CPP      = g++ -std=c++11 -pedantic
-CPPFLAGS = -Wall -g -I../../src -DDATA_LOCATION="\"../../data/\""
+CPPFLAGS = -Wall -g -I../../src -DDATA_LOCATION="\"../../data/\"" 
 
 
 SOURCES	:= $(shell find ../../src/data/ -name *.cxx)

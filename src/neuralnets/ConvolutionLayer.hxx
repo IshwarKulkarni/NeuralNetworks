@@ -60,10 +60,10 @@ struct Kernel : public Volume
                 Output.at(oy,ox) = act->Function( IpImage.DotAt(Vec::Loc(int(x), int(y)), *this) + Bias, LGrads.at(oy, ox));
     }
 
-    inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, double eta)
+    inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, Volume& dW, double eta)
     {
         GetPGrads(gradients, pgrads);
-        ChangeWeights(gradients, inputs, eta);
+        ChangeWeights(gradients, inputs, dW, eta);
     }
 
     inline void GetPGrads(Frame& gradients, Volume& pgrads)
@@ -83,10 +83,14 @@ struct Kernel : public Volume
             }
     }
 
-    inline void ChangeWeights(Frame grads, const Volume& ipt, double eta)
+    inline void ChangeWeights(Frame grads, const Volume& ipt, Volume& dW,  double eta)
     {
+        dW.Fill(0.);
         for3d(size) 
-            at(z, y, x) -= ipt(z).DotAt(Vec::Loc(x + grads.size.x / 2 - size.x / 2, y + grads.size.y / 2 - size.y / 2), grads);
+            dW.at(z, y, x) +=  ipt(z).DotAt(Vec::Loc(x + grads.size.x / 2 - size.x / 2, y + grads.size.y / 2 - size.y / 2), grads);
+
+        for3d(size)
+            at(z, y, x) -= eta* dW.at(z, y, x);
 
         double dB = 0;
         for (auto& g : grads)dB += g;
@@ -117,7 +121,10 @@ public:
         Layer("ConvLayer-" + desc.Name, desc.IpSize, Kernel::GetOpSize2(desc, prev), desc.Activation, prev)
     {
         for (unsigned i = 0; i < desc.NumberOfKernels; ++i)
+        {
             Kernels.push_back(Kernel(desc, Layer::InputSize().z));
+            dW.push_back(Volume(Kernels.back().size));
+        }
     }
 
     virtual Volume& ForwardPass(Volume& input)
@@ -140,7 +147,7 @@ public:
         {
             PGrads.Fill(0.);
             for (unsigned i = 0; i < Kernels.size(); ++i)
-                Kernels[i].BackwardPass(Grads(i), Prev->Out(), PGrads, Eta);
+                Kernels[i].BackwardPass(Grads(i), Prev->Out(), PGrads, dW[i], Eta);
 
           //  Logging::Log << "backError: " << PGrads;
 
@@ -148,7 +155,7 @@ public:
         }
         else
             for (unsigned i = 0; i < Kernels.size(); ++i)
-                Kernels[i].ChangeWeights(Grads(i), Input, Eta);
+                Kernels[i].ChangeWeights(Grads(i), Input, dW[i], Eta);
     }
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
@@ -173,11 +180,15 @@ public:
         out.flush();
     }
 
-    virtual ~ConvolutionLayer() { for (auto& k : Kernels) k.Clear(); }
+    virtual ~ConvolutionLayer() { 
+        for (auto& k : Kernels) k.Clear(); 
+        for (auto& v : dW) v.Clear();
+    }
 
 
 private:
     std::vector<Kernel>  Kernels;
+    std::vector<Volume> dW;
 };
 
 #endif

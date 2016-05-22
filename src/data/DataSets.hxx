@@ -7,7 +7,7 @@
 
 #include "utils/Vec23.hxx"
 #include "utils/SimpleMatrix.hxx"
-#include "data/MINST-ImageReader.hxx"
+#include "data/MNIST-ImageReader.hxx"
 #include "data/CIFAR-ImageReader.hxx"
 
 struct TargetPatternDef
@@ -25,25 +25,35 @@ struct TargetPatternDef
 
     TargetPatternDef(unsigned numTargetClasses = 0, TargetOutputType type = UseBinaryArray, 
         double fillLo = 0, double fillHi = 1) :
-        FillLow(fillLo),
         FillHigh(fillHi),
+        FillLow(fillLo),
         NumTargetClasses(numTargetClasses),
         TargetVectorSize(0),        
         TargetType(type){}
 };
 
-template<typename TI> // These two types should ahve [] operator
+struct Char255ToDoubleVolume {
+    inline void operator()(unsigned char*** in, SimpleMatrix::Matrix3<double>& out) {
+        auto inLin = in[0][0];
+        for (auto& o : out) o = double(*inLin++) / 255;
+    }
+};
+
+template<typename TI, typename ConverterType = Char255ToDoubleVolume > // First type should have [] operator, second 
 class PatternSet
 {
-    struct Pattern    
+    struct Pattern
     {
+        ConverterType Converter;
         TI Input;
+        void GetInput(SimpleMatrix::Matrix3<double>& V) { Converter(Input, V); }
         double* Target;
     };
     
     /* 
-    |------------------------|--------------|-----------|
-    |{    Training Set      }|{ Validation }|{ TestSet  } */
+    |---------------------------|--------------|-----------|
+    |{      Training Set       }|{ Validation }|{ TestSet }|
+    */
 public:
 
     inline PatternSet(unsigned dataSize, double validationFraction, double testFraction,
@@ -54,7 +64,6 @@ public:
         TrainSize(dataSize - TestSetsize - VldnSize),
         Targets(0),
         Patterns(dataSize)
-        
     {
         if(testFraction + validationFraction > 1.0)
             throw std::logic_error ("Invalid test and validation fractions: " 
@@ -214,7 +223,7 @@ extern void  ReadDataSplitsFromFile();
 
 PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize); // one dimension output
 
-PatternSet<double***> LoadMnistData2(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = MNISTReader::NumImages);
+PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = MNISTReader::NumImages);
 
 PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = CIFAR::NumImages);
 #endif

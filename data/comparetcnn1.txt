@@ -2,8 +2,13 @@
 
 # Begin with some convolution layers
 
-->ConvLayer # Starts a block of one of more convolution layers
+->NetworkDescription
+EtaMultiplier  : .01
+EtaDecayRate  : .9
+->EndNetworkDescription
 
+
+->ConvLayer # Starts a block of one of more convolution layers
 Name	 : Input
 IpSize	 : [28,28,1]  # Must have an input size for first layer
 Activation	 : Sigmoid
@@ -11,17 +16,17 @@ NumKernels	 : 5
 KernelSize	 : [5,5]
 KernelStride : [1,1]
 Last 		     :  true  # last layer in this block
-->ConvDescEnd
+->EndConvLayer
 
 ######################
 
-#->AveragePoolingLayer
-#
-#Name 		 : Avg1
-#Activation   : Sigmoid
-#WindowSize   : [2,2]
-#
-#->EndAveragePoolingLayer
+->AveragePoolingLayer
+
+Name 		 : Avg1
+Activation   : Sigmoid
+WindowSize   : [2,2]
+
+->EndAveragePoolingLayer
 
 ######################
 
@@ -35,7 +40,7 @@ KernelSize	 : [5,5]
 KernelStride : [3,3]
 Last 		 :  true  # Again, last layer
 
-->ConvDescEnd
+->EndConvLayer
 
 #Now throw in some Fully connected layer
 

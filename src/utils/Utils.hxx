@@ -179,7 +179,7 @@ namespace StringUtils
 
 namespace Logging
 {
-    inline const char* TimeNowStringFull(time_t now = -1)
+    inline const char* TimeNowStringFull(time_t now = -1, const char* format = "%a, %d-%m-%Y, %H:%M:%S ")
     {
         if (now == -1)
             now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -193,7 +193,7 @@ namespace Logging
         static const unsigned TimeStampLen = 30;
         static char stamp[TimeStampLen];
 
-        strftime(stamp, TimeStampLen, "%a, %d-%m-%Y, %H:%M:%S ", &timeinfo);
+        strftime(stamp, TimeStampLen, format, &timeinfo);
 
         return stamp;
     }
@@ -208,7 +208,7 @@ namespace Logging
 
         operator std::ofstream&() { return LogFile; }
 
-        static inline const char* LogFileName() { return "LogFile.txt"; }
+        static inline std::string LogFileName() { return "LogFile"; }
 
         template <typename Type>
         inline Logger& operator<<(const Type& t)
@@ -226,7 +226,11 @@ namespace Logging
 
         Logger()
         {
-            LogFile.open(LogFileName(), std::ofstream::out);
+            LogFile.open(LogFileName() + 
+#if 0
+                TimeNowStringFull(-1, "_%d-%m-%y_%H%M%S") 
+#endif
+                + ".log", std::ofstream::out);
             LogFile << "Session Logging Started At : " << TimeNowStringFull() << "\nSession Type: " <<
 #ifdef _DEBUG
                 " Debug \n"

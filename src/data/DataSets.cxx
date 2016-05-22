@@ -1,4 +1,4 @@
-#include "MINST-ImageReader.hxx"
+#include "MNIST-ImageReader.hxx"
 #include "DataSets.hxx"
 #include "utils/Utils.hxx"
 #include "utils/SimpleMatrix.hxx"
@@ -47,38 +47,29 @@ PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize)
     return data;
 }
 
-PatternSet<double***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
+PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
 {
     Logging::Timer timer("MNIST2 data load");
     
     InputSize = { MNISTReader::ImW, MNISTReader::ImH, 1 };
     TargetPatternDef targetPattern(10, TargetPatternDef::UseUnaryArray, highlo[0], highlo[1]);
 
-    PatternSet<double***> data(N, VldnFraction, TestFraction, targetPattern);
+    PatternSet<unsigned char***> data(N, VldnFraction, TestFraction, targetPattern);
     OutputSize = targetPattern.TargetVectorSize;
 
     MNISTReader ImageReader(DATA_LOCATION MNISTTHandWriting);
-    unsigned char
-        ***images2D = ImageReader.ImageDataCopy2D(N, 0, true),
-        *labels = ImageReader.LabelData(N, 0, true);
-
-    double*** images2Df = SimpleMatrix::ColocAlloc<double>(Size3(MNISTReader::ImW, MNISTReader::ImH,N));
-
-    for (unsigned i = 0; i < N*MNISTReader::ImageSizeLin; ++i)
-        images2Df[0][0][i] = double(images2D[0][0][i]) / 255.f;
+    auto imageLables = ImageReader.ImageDataCopy2D(N);
 
     for (unsigned i = 0; i < N; ++i)
-        data[i].Input = &(images2Df[i]),
-        data[i].Target = data.GetTarget(labels[i]);
+        data[i].Input = imageLables.first + i,
+        data[i].Target = data.GetTarget(imageLables.second[i]);
 
-    delete[] images2D[0][0];
-    delete[] images2D[0];
-    delete[] images2D;
 #ifndef _DEBUG
     data.ShuffleAll();
 #endif
-    data.SetDataToDelete(images2Df);
-    return data;
+    delete[] imageLables.second;
+    data.SetDataToDelete(imageLables.first);
+    return std::move(data);
 }
 
 PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
@@ -92,18 +83,17 @@ PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& InputSize, unsigned& Ou
     OutputSize = targetPattern.TargetVectorSize;
 
     CIFARReader imageReader;
-    auto allImages = imageReader.ImageDataCopy(N);
-    imageReader.TestCIFARReader();
+    //imageReader.TestCIFARReader();
+    auto allImages = imageReader.ImageDataCopy();
 
     for (unsigned i = 0; i < N; ++i)
         data[i].Input = allImages.first + i*CIFAR::ImD,
         data[i].Target = data.GetTarget(allImages.second[i]);
 
-
-
 #ifndef _DEBUG
     data.ShuffleAll();
 #endif
+
     delete[] allImages.second;
     data.SetDataToDelete(allImages.first);
     return data;

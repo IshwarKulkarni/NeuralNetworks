@@ -9,15 +9,17 @@ using namespace SimpleMatrix;
 
 int main()
 {
-    try
-    {
+
+    //try
+    //{
+        cout << "Building network..." ;
+        Network nn(DATA_LOCATION "MNIST_Network.config");
+        cout << " done!" << endl;
         Vec::Size3 in;; unsigned out;
-        cout << "Reading data..." << endl;
+        cout << "\nReading data...";
         
-        cout << "Building network..." << endl;
-        Network nn(DATA_LOCATION "CIFAR_Network.config");
-        
-        auto data = LoadCifarData10(in, out, nn.GetOutputHiLo());
+        auto data = LoadMnistData2(in, out, nn.GetOutputHiLo());
+        cout << " done!" << endl;
         data.Summarize(Log, false);
 
         cout << endl << "Starting training... " << endl;
@@ -27,32 +29,25 @@ int main()
         unsigned maxEpochs = 20;
         double   targetAcc = 0.95, acc = 0.;
         
-        auto char255ToDouble = [&](unsigned char*** in, Matrix3<double> out){
-            for (size_t i = 0; i < out.size(); ++i)
-                out[i] = double(in[0][0][i]) / 255;
-        };
-
-
         for (size_t i = 0; i < maxEpochs && acc < targetAcc; i++)
         {
             epochTime.TimeFromLastCheck();
             
-            nn.Train(data.TrainBegin(), data.TrainEnd() , char255ToDouble );
+            nn.Train(data.TrainBegin(), data.TrainEnd());
             double lastCheck = epochTime.TimeFromLastCheck();
             
-            nn.Test(data.VldnBegin(), data.VldnEnd(), char255ToDouble);
+            nn.Test(data.VldnBegin(), data.VldnEnd());
             auto res = nn.Results(); acc = res.x;
 
             cout << "Train Epoch " << i << "> [" << lastCheck << "s]:\tAccuracy: "
-                 << res.x * 100 << "%,\t Mean Error: " << res.y << endl;
+                 << res.first * 100 << "%,\t Mean Error: " << res.second << endl;
         }
-
-    }
-    catch (std::exception e)
-    {
-        std::cerr << e.what() << endl;
-        throw e;
-    }
+    //}
+    //catch (std::exception e)
+    //{
+    //    std::cerr << e.what() << endl;
+    //    throw e;
+    //}
 
     return 0;
 }

@@ -1,4 +1,4 @@
-#include "MINST-ImageReader.hxx"
+#include "MNIST-ImageReader.hxx"
 #include "utils/Utils.hxx"
 #include "utils/SimpleMatrix.hxx"
 
@@ -94,20 +94,25 @@ unsigned char** MNISTReader::ImageDataCopy(unsigned N, unsigned offset, bool Tra
     return 0;
 }
 
-unsigned char*** MNISTReader::ImageDataCopy2D(unsigned N, unsigned offset, bool TrainImg)
+std::pair<unsigned char***, unsigned char*> MNISTReader::ImageDataCopy2D(unsigned N, bool Train)
 {
-    if (N + offset <= MNISTReader::NumImages)
-    {
-        std::ifstream& in = TrainImg ? ImageTrainFstrm : ImageTestFstrm;
-        if (!in) throw std::invalid_argument("filestream launch MNIST Reader was bad.");
-        char*** mem = ColocAlloc<char>(Vec::Size3(ImW ,ImH, N));
-        ImageTrainFstrm.seekg(ImageFileOffset + offset* ImageSizeLin);
-        ImageTrainFstrm.read(mem[0][0], ImageSizeLin * N);
-        if(in.gcount() != N * ImageSizeLin)
-            std::runtime_error("Did not read enough data");
-        return (unsigned char***)mem;
-    }
-    return 0;
+    if (N > NumImages)throw std::invalid_argument("Requested too many images: " + std::to_string(N));
+
+    std::ifstream& imIn = Train ? ImageTrainFstrm : ImageTestFstrm;
+    if (!imIn) throw std::invalid_argument("Failed to open MNIST image file.");
+    
+    ImageTrainFstrm.seekg(ImageFileOffset);
+    char*** images = ColocAlloc<char>(Vec::Size3(ImW, ImH, N));
+    ImageTrainFstrm.read(images[0][0], ImageSizeLin * N);
+    if (imIn.gcount() != N * ImageSizeLin) std::runtime_error("Did not read enough image data");
+
+    std::ifstream& lblIn = Train ? LabelTrainFstrm : LabelTestFstrm;
+    lblIn.seekg(LabelFileOffset);
+    char* lables = new char[N];
+    lblIn.read((lables), N);
+
+    if (lblIn.gcount() != N * ImageSizeLin) std::runtime_error("Did not read enough label data");
+    return std::make_pair((unsigned char***)images, (unsigned char*)lables);
 }
 
 unsigned MNISTReader::LabelData(unsigned idx)

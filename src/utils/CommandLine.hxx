@@ -25,6 +25,7 @@ private:
     char ArgDelim;          // \ArgDelim separates the name from value e.g. in "-name=value" (defaults of the first constructor) ArgDelim is '=' and Separator is "-"
     std::string CommentDelim;        // if \CommentDelim is the first char, that kills the string.
     const std::string LastLineToRead; // when processing a file, stop after reading line that begins with this.
+    bool LastLineRead;
 
     std::vector<std::string> Prefixes; // arguments that do not follow " <ArgDelim>name<Separator>value " format, example the prog name, i.e. argv[0] in arguments to main()
 
@@ -43,7 +44,8 @@ public:
         Separator(separator),
         ArgDelim(argDelim),
         CommentDelim(comDelim),
-        LastLineToRead(lastLine)
+        LastLineToRead(lastLine),
+        LastLineRead(false)
     {    
         if(StringUtils::HasWSpace(separator))
             throw std::invalid_argument(separator + " is not a valid separator for the NameValue Pair, cannot contain spaces\n");
@@ -58,7 +60,8 @@ public:
         Separator(separator),
         ArgDelim(argDelim),
         CommentDelim(comDelim),
-        LastLineToRead(lastLine)
+        LastLineToRead(lastLine),
+        LastLineRead(false)
         {
             std::istringstream iss(argString);
             Init(iss);
@@ -68,7 +71,8 @@ public:
         Separator(separator),
         ArgDelim(argDelim),
         CommentDelim(comDelim),
-        LastLineToRead(lastLine)
+        LastLineToRead(lastLine),
+        LastLineRead(false)
         {
             Init(arg);
         }
@@ -139,6 +143,7 @@ public:
 
     size_t GetNumPrefixes() const { return Prefixes.size(); }
 
+    bool IsLastLineRead() { return LastLineRead; }
     const inline std::string& GetArg(unsigned idx) const { return Prefixes[idx]; } // return ws separated prefix
     
     inline void Die() {  Pairs.clear();  Prefixes.clear(); }
@@ -162,7 +167,10 @@ private:
         {
             
             if (LastLineToRead.length() && StringUtils::StrTrim(buf).find(LastLineToRead, 0) == 0)
+            {
+                LastLineRead = true;
                 break;
+            }
 
             if(strm.gcount() > bufsize)
                 throw std::overflow_error("Extracted line was too long, Ignoring line\n");

@@ -18,6 +18,7 @@ namespace Vec
         {
             struct { T x, y; };
             struct { T w, h; };
+            struct { T first, second; };
             T  Raw[2];
         };
 #ifdef __GNUC__

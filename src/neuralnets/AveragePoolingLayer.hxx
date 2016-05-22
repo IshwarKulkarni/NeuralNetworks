@@ -20,7 +20,6 @@ struct AvgPooLayerDesc
         Activation(actName),
         WindowSize(windwSize){};
 
-
 private:
     AvgPooLayerDesc(AvgPooLayerDesc&);
     AvgPooLayerDesc& operator=(AvgPooLayerDesc&);
@@ -28,7 +27,7 @@ private:
 
 //small windows that average inputs (& add bias) over that window and apply activation 
 // Each average is further multiplied by a weight (same across all windows for a frame)
-struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // x is weight, y is bias
+struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is weight, second is bias
 {
      Vec::Size2  WindowSize;
      const double Scale;
@@ -56,7 +55,7 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // x is weight,
                     for (size_t wx = 0; wx < WindowSize.x; ++wx)
                         res += in.at(z, y*WindowSize.y + wy, x*WindowSize.x + wx);
 
-                res = res * Scale * at(z).x + at(z).y;
+                res = res * Scale * at(z).first + at(z).second;
                 out.at(z, y, x) = act->Function(res, LGrads.at(z, y, x));
             }
     }
@@ -90,9 +89,9 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // x is weight,
                     for (size_t wx = 0; wx < WindowSize.x; ++wx)
                         diff += g * ipt.at(z, y*WindowSize.y + wy, x*WindowSize.x + wx);
 
-                dW.at(z).y += g; // bias
+                dW.at(z).second += g; // bias
             }
-            dW.at(z).x += diff * Scale;
+            dW.at(z).first += diff * Scale;
         }
 
         for (size_t z = 0; z < grads.size.z; ++z)
@@ -105,7 +104,7 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // x is weight,
             throw std::invalid_argument("Input size cannot be determined for averaging layer\n");
         if (inSz() < desc.WindowSize())
             throw std::invalid_argument("Averaging window is larger than input size\n");
-        return Vec::Size3( inSz.x / desc.WindowSize.x,inSz.y / desc.WindowSize.y, inSz.z);
+        return Vec::Size3( Utils::iDivUp(inSz.x, desc.WindowSize.x), Utils::iDivUp(inSz.y,desc.WindowSize.y), inSz.z);
     }
 };
 
@@ -115,7 +114,11 @@ public:
     AveragePoolingLayer(const AvgPooLayerDesc& desc, Layer* prev = 0) :
         Layer(  "AveragePooling-" + desc.Name, prev->Out().size,
                 AveragingKernels::GetOpSize(desc, prev), desc.Activation, prev),
-                Windows(desc.WindowSize, prev->Out().size.z){}
+                Windows(desc.WindowSize, prev->Out().size.z)
+    {
+        if ((Input.size.x % Windows.WindowSize.x) || (Input.size.y % Windows.WindowSize.y) )
+            throw std::invalid_argument("Invalid window size in averagin layer: leaves edges out");
+    }
 
     virtual Volume& ForwardPass(Volume& input)
     {
@@ -131,8 +134,6 @@ public:
 
         for3d(Grads.size) Grads.at(z, y, x) = LGrads.at(z, y, x) * backError.at(z, y, x);
 
-        //Logging::Log  << "\nBackerror: " << backError << "\nGradients " << Grads ; // << "\nLGrads :  " << LGrads << std::endl;
-        
         if (Prev)
         {
             PGrads.Fill(0.);

@@ -17,6 +17,7 @@ public:
     static const unsigned ImH = 28;
     static const unsigned NumImages = 60000;
 
+    
     MNISTReader(const char* location);
 
     // Get idx'th image, returned alloc'ed memory  and freeing is handled;
@@ -29,7 +30,7 @@ public:
     unsigned char** ImageDataCopy(unsigned N, unsigned offset, bool TrainImg = true/*Query Training Image not*/);
 
     // Same as above, but the returned pointer is not freed when object dies.
-    unsigned char*** ImageDataCopy2D(unsigned N, unsigned offset, bool TrainImg = true/*Query Training Image not*/);
+    std::pair<unsigned char***, unsigned char*> ImageDataCopy2D(unsigned N, bool TrainImg = true/*Query Training Image not*/);
 
     // Get idx'th label;
     unsigned LabelData(unsigned idx);

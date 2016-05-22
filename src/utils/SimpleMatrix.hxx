@@ -352,7 +352,7 @@ namespace SimpleMatrix
     {
         Matrix<T> ret = Vec::Size2(N, N);
         ret.Fill(zeros);
-        for (size_t i = 1; i < N; ++i)
+        for (size_t i = 0; i < N; ++i)
             ret.data[i][i] = ones;
         return ret;
     }

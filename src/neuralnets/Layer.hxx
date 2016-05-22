@@ -51,11 +51,17 @@ public:
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
-        out << "\nInputs for "      << Name << Input
-            << "\nGradients for "   << Name << Grads
-            << "\nLGradients for "  << Name << LGrads 
-            << "\nPGradients for "  << Name << PGrads
-            << "\nOutputs for "     << Name << Output;
+        bool all = printList.find("all") != std::string::npos;
+        if (all || printList.find("Inputs") != std::string::npos)
+            out << "\nInputs for " << Name << Input;
+        if (all || printList.find("LGradients") != std::string::npos)
+            out << "\nLGradients for " << Name << LGrads;
+        else if (all || printList.find("PGradients") != std::string::npos)
+            out << "\nPGradients for " << Name << PGrads;
+        else if (all || printList.find("Gradients") != std::string::npos)
+            out << "\nGradients for " << Name << Grads;
+        if (all || printList.find("Outputs") != std::string::npos)
+            out << "\nOutputs for " << Name << Output;
     }
 
     const Activation* GetAct() const { return Act; }

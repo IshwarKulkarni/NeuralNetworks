@@ -21,7 +21,6 @@ double inline TanHActivation(double p, double& grad)
     return p;
 }
 
-
 typedef decltype(&SigmoidActivation)        ActivationFunction;
 typedef decltype(&Utils::RoundedCompare)    ResultCmpPredicateType;
 
@@ -37,8 +36,8 @@ struct Activation
 inline Activation* GetActivationByName(std::string name)
 {
     static Activation List[] = {
-        {"Sigmoid", SigmoidActivation, Utils::RoundedCompare,  0.1, { 0, 1} },
-        {"TanH",    TanHActivation,    Utils::SameSign,        0.01, {-1, 1} }
+        {"Sigmoid", SigmoidActivation, Utils::RoundedCompare,  0.01, { 0, 1} },
+        {"TanH",    TanHActivation,    Utils::SameSign,        0.01, {-.8, .8} }
     };
 
     for (unsigned i = 0; i < ARRAY_LENGTH(List); ++i)

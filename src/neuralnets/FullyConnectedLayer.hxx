@@ -15,7 +15,7 @@ typedef std::vector<double> Row;
 
 struct Neuron
 {
-    Neuron(size_t N) : Weights(N + 1) {}
+    Neuron(size_t N) : Weights(N + 1), dWeights(N+1) {}
 
     inline void InitWeights()
     {
@@ -35,30 +35,28 @@ struct Neuron
     inline double operator[](unsigned wIdx)  const { return Weights[wIdx]; }
     inline size_t NumWeights() const { return Weights.size() - 1; }
     
-    template<typename TI, typename TPG>
-    inline void BackwardPass(double eta, double grad, const TI& inputs, TPG& pgrad)
+    inline void BackwardPass(double eta, double grad, Volume& pgrads, const Volume& inputs)
     {
-        GetPGrads(grad, pgrad);
+        for (size_t i = 0; i < Weights.size() - 1; ++i)
+            pgrads[i] += Weights[i] * grad;
+
         ChangeWeights(eta, grad, inputs);
     }
 
-    template<typename TPG>
-    inline void ChangeWeights(double eta, double grad, const TPG& inputs)
+    void ChangeWeights(double eta, double grad, const Volume& inputs)
     {
+        dWeights.assign(dWeights.size(), 0.0);
         for (unsigned i = 0; i < Weights.size() - 1; ++i)
-            Weights[i] -= eta * grad * inputs[i];
+            dWeights[i] += grad * inputs[i];
 
-        Weights.back() += eta * grad;
+        dWeights.back() += grad;
+
+        for (unsigned i = 0; i < Weights.size(); ++i)
+            Weights[i] -= dWeights[i] * eta;
     }
 
-    template<typename TPG>
-    inline void GetPGrads(double grad, TPG& pgrads)
-    {
-        for (unsigned i = 0; i < Weights.size() - 1; ++i)
-            pgrads[i] += grad * Weights[i];
-    }
 
-    std::ostream& Print(std::ostream& stream) const
+   std::ostream& Print(std::ostream& stream) const
     {
         for (unsigned i = 0; i < NumWeights(); ++i)
             stream << Weights[i] << ",\t";
@@ -69,7 +67,7 @@ struct Neuron
     }
 
 private:
-    Row Weights; // Nth index is Bias
+    Row Weights, dWeights; // Nth index is Bias
 };
 
 
@@ -97,8 +95,6 @@ public:
         for (size_t i = 0; i < Neurons.size(); i++)
             Output[i] = Neurons[i].ForwardPass(input.data[0][0], Act, LGrads[i]);
 
-        Print("Output");
-
         if (Next) return Next->ForwardPass(Output);
         return Output;
     }
@@ -112,7 +108,7 @@ public:
         {
             PGrads.Fill(0.0);
             for (unsigned n = 0; n < Neurons.size(); ++n)
-                Neurons[n].BackwardPass(Eta, Grads[n], Input, PGrads);
+                Neurons[n].BackwardPass(Eta, Grads[n], PGrads , Input);
         }
 
         if (Prev)
@@ -132,17 +128,21 @@ public:
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
-        bool all = printList.find("all") != std::string::npos;
+        bool all = printList.find("all") != std::string::npos, printed = false;
         if (all || printList.find("Summary") != std::string::npos)
-        
+        {
             out << "\n--> Summary for " << Name << "\t| " << Act->Name << "\t| Eta: " << Eta
                 << ",\tInputs : " << (Neurons.size() ? Neurons[0].NumWeights() : 0)
                 << ",\tOutputs: " << Neurons.size()
                 << ",\tEta    : " << Eta << "\n";
+            printed = true;
+        }
         if (all || printList.find("Neurons") != std::string::npos)
+        {
             for (auto& n : Neurons) n.Print(out);
-            
-        if (all || printList.find("full") != std::string::npos)
+            printed = true;
+        }
+        if (!printed || all || printList.find("full") != std::string::npos)
             Layer::Print(printList, out);
         out.flush();
     }

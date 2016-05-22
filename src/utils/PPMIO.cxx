@@ -91,6 +91,8 @@ extern unsigned char* PPMIO::Read(string name, size_t& width, size_t& height, si
         throw std::invalid_argument("PPM file is corrpt: " + name);
 
     char whitespace = fileStream.get();
+    if (iswspace(whitespace))
+        throw std::runtime_error("File " + name + " is notin correct PPM format");
 
     size_t pixelsPerComponent = height*width;
     size_t numBytes = pixelsPerComponent * components;

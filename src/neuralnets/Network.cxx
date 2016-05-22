@@ -7,18 +7,20 @@
 
 using namespace std;
 
-Network::Network(std::string mnistLoc) :
+Network::Network(std::string configFile) :
     EtaMultiplier(1.0),
     EtaDecayRate(1.0),
     SmallTestRate(0),
     SmallTestSize(0),
-    SmallTestNum(0), 
-    WeightSanityCheck(false), 
+    SmallTestNum(0),
+    WeightSanityCheck(false),
     ErrorFunction(GetErrofFunctionByName("MeanSquareError"))
 {
-    std::ifstream inFile(mnistLoc.c_str(), ios::in | ios::binary);
+    std::ifstream inFile(configFile.c_str(), ios::in | ios::binary);
     if (!inFile.good())
-        throw std::invalid_argument(("File to read network config from is unavailable to read from: " + mnistLoc).c_str());
+        throw std::invalid_argument(("File to read network config from is unavailable to read from: " + configFile).c_str());
+
+    this->ConfigSource = configFile;
 
     bool networkDescribed = false;
     char buffer[256];
@@ -35,12 +37,14 @@ Network::Network(std::string mnistLoc) :
                 throw std::invalid_argument("You can describe network only once");
 
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndNetworkDescription");
+            if (!nvpp.IsLastLineRead())
+                throw std::runtime_error("End of file found matching ->EndNetworkDescription");
 
             nvpp.Get("EtaMultiplier", EtaMultiplier);
-            nvpp.Get("EtaDecayRate",  EtaDecayRate);
+            nvpp.Get("EtaDecayRate", EtaDecayRate);
             nvpp.Get("SmallTestRate", SmallTestRate);
             nvpp.Get("SmallTestSize", SmallTestSize);
-            nvpp.Get("SmallTestNum",  SmallTestNum);
+            nvpp.Get("SmallTestNum", SmallTestNum);
             nvpp.Get("WeightSanityCheck", WeightSanityCheck);
 
             std::string errfName = "MeanSquareError";
@@ -52,35 +56,34 @@ Network::Network(std::string mnistLoc) :
         }
         else if (StringUtils::beginsWith(line, "->ConvLayer"))
         {
-            std::string last;
-            while (inFile && last != "true")
+
+            ConvLayerDesc desc; desc.KernelStride = { 1, 1 };
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndConvLayer");
+            if (!nvpp.IsLastLineRead())
+                throw std::runtime_error("End of file found matching ->EndConvLayer");
+
+            nvpp.Get("Name", desc.Name);
+            nvpp.Get("IpSize", desc.IpSize);
+            nvpp.Get("Activation", desc.Activation);
+            nvpp.Get("NumKernels", desc.NumberOfKernels);
+            nvpp.Get("KernelSize", desc.KernelSize);
+            nvpp.Get("KernelStride", desc.KernelStride);
+            nvpp.Get("NumOutputs", desc.NumOuputs);
+
+            if (!size() && desc.IpSize() == 0)
+                throw std::invalid_argument("First convolution layer description should have a valid input size");
+
+            if (desc.Name.length() &&
+                GetActivationByName(desc.Activation) &&
+                desc.NumberOfKernels &&
+                desc.KernelSize() &&
+                desc.KernelStride())
             {
-                ConvLayerDesc desc;
-                NameValuePairParser nvpp(inFile, ":", '\0', "#", "->ConvDescEnd");
-                nvpp.Get("Last", last);
-
-                nvpp.Get("Name", desc.Name);
-                nvpp.Get("IpSize", desc.IpSize);
-                nvpp.Get("Activation", desc.Activation);
-                nvpp.Get("NumKernels", desc.NumberOfKernels);
-                nvpp.Get("KernelSize", desc.KernelSize);
-                nvpp.Get("KernelStride", desc.KernelStride);
-                nvpp.Get("NumOutputs", desc.NumOuputs);
-
-                if (!size() && desc.IpSize() == 0)
-                    throw std::invalid_argument("First convolution layer description should have a valid input size");
-
-                if (desc.Name.length() &&
-                    GetActivationByName(desc.Activation) &&
-                    desc.NumberOfKernels &&
-                    desc.KernelSize() &&
-                    desc.KernelStride())
-                {
-                    push_back(new ConvolutionLayer(desc, size() ? back() : nullptr));
-                }
-                else
-                    throw std::invalid_argument("Convolution layer descriptor is ill formed");
+                push_back(new ConvolutionLayer(desc, size() ? back() : nullptr));
             }
+            else
+                throw std::invalid_argument("Convolution layer descriptor is ill formed");
+
         }
         else if (StringUtils::beginsWith(line, "->AveragePoolingLayer"))
         {
@@ -92,12 +95,14 @@ Network::Network(std::string mnistLoc) :
 
             AvgPooLayerDesc desc;
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndAveragePoolingLayer");
-            
+            if (!nvpp.IsLastLineRead())
+                throw std::runtime_error("End of file found matching ->EndAveragePoolingLayer");
+
             nvpp.Get("Name", desc.Name);
             nvpp.Get("Activation", desc.Activation);
             nvpp.Get("WindowSize", desc.WindowSize);
-            
-            if (desc.Name.length() && GetActivationByName(desc.Activation) )
+
+            if (desc.Name.length() && GetActivationByName(desc.Activation))
                 push_back(new AveragePoolingLayer(desc, back()));
             else
                 throw std::invalid_argument("Average pooling layer descriptor is ill formed");
@@ -105,6 +110,9 @@ Network::Network(std::string mnistLoc) :
         else if (StringUtils::beginsWith(line, "->FullyConnectedLayers"))
         {
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndFullyConnectedLayers");
+            if (!nvpp.IsLastLineRead())
+                throw std::runtime_error("End of file found matching ->EndFullyConnectedLayers");
+
             const auto& nameSizes = nvpp.GetPairs<unsigned>();
 
             for (unsigned i = 0; i < nameSizes.size() - 1; ++i)
@@ -118,17 +126,19 @@ Network::Network(std::string mnistLoc) :
 
                 if (!inSize) inSize = back()->Out().size();
 
-                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, size() ? back() :nullptr));
+                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, back()));
             }
         }
     }
-    
-    if (!size() )throw std::invalid_argument("File could not be read!");
-    
-    ErrFRes = Volume(back()->Out().size);
-    
-    for (auto* l : *this) l->GetEta() *= EtaMultiplier;
-    
+
+    if (size())
+    {
+        ErrFRes = Volume(back()->Out().size);
+        for (auto* l : *this) l->GetEta() *= EtaMultiplier;
+    }
+    else
+        throw std::invalid_argument("File could not be read!");
+
     Sanity();
 
     Print("Network & Summary");
