@@ -1,3 +1,22 @@
+/*
+Copyright (c) Ishwar R. Kulkarni
+All rights reserved.
+
+This file is part of NeuralNetwork Project by 
+Ishwar Kulkarni , see https://github.com/IshwarKulkarni/NeuralNetworks
+
+If you so desire, you can copy, redistribute and/or modify this source 
+along with  rest of the project. However any copy/redistribution, 
+including but not limited to compilation to binaries, must carry 
+this header in its entirety. A note must be made about the origin
+of your copy.
+
+NeuralNetwork is being distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+FITNESS FOR A PARTICULAR PURPOSE.
+
+*/
+
 #ifndef __AVERAGE_POOLING_LAYER_INCLUDED__
 #define __AVERAGE_POOLING_LAYER_INCLUDED__
 

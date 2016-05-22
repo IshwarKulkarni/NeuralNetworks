@@ -1,3 +1,64 @@
+/*
+Copyright (c) Ishwar R. Kulkarni
+All rights reserved.
+
+This file is part of NeuralNetwork Project by 
+Ishwar Kulkarni , see https://github.com/IshwarKulkarni/NeuralNetworks
+
+If you so desire, you can copy, redistribute and/or modify this source 
+along with  rest of the project. However any copy/redistribution, 
+including but not limited to compilation to binaries, must carry 
+this header in its entirety. A note must be made about the origin
+of your copy.
+
+NeuralNetwork is being distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+FITNESS FOR A PARTICULAR PURPOSE.
+
+*/
+
+/*
+Copyright Ishwar R. Kulkarni 2015.
+
+This file is part of NeuralNetwork Project by Ishwar Kulkarni https://github.com/IshwarKulkarni/NeuralNetworks
+
+    NeuralNetwork  is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    NeuralNetwork  is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with NeuralNetwork .  If not, see <http://www.gnu.org/licenses/>.
+	
+Please make a mention of the author in any further copies of this source.
+*/
+
+/*
+Copyright Ishwar R. Kulkarni 2015.
+
+This file is part of NeuralNetwork Project by Ishwar Kulkarni https://github.com/IshwarKulkarni/NeuralNetworks
+
+    NeuralNetwork  is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    NeuralNetwork  is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with NeuralNetwork .  If not, see <http://www.gnu.org/licenses/>.
+	
+Please make a mention of the author in any further copies of this source.
+*/
+
 #ifndef __CIFAR_READER_HXX__
 #define __CIFAR_READER_HXX__
 
