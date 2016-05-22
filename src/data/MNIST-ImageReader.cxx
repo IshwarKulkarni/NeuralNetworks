@@ -51,10 +51,10 @@ The labels values are 0 to 9.
 */
 
 static const std::string MNISTFileNames[4] = {
-    "train-images.idx3-ubyte",
-    "t10k-images.idx3-ubyte",
-    "train-labels.idx1-ubyte",
-    "t10k-labels.idx1-ubyte"
+    "train-images-idx3-ubyte",
+    "t10k-images-idx3-ubyte",
+    "train-labels-idx1-ubyte",
+    "t10k-labels-idx1-ubyte"
 
 };
 
