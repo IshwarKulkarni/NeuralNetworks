@@ -12,7 +12,7 @@ The repo is organized as
 	    |- MNIST data 
 	    |- <<future CIFAR-10 data
 	    |- <<future Leeda butterfly data etc.
-		
+			
         |-NeuralNetworks
             | - VS <Visual Studio 2015/2013 build files>
             | - GCC <GCC 5.3 build files>
