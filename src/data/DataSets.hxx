@@ -82,9 +82,13 @@ public:
         VldnSize(unsigned(dataSize * validationFraction)),
         TrainSize(dataSize - TestSetsize - VldnSize),
         Targets(0),
+        DataToDelete(nullptr),
+        DataToDelete2(nullptr),
+        DataToDelete3(nullptr),
         Patterns(dataSize)
+       
     {
-        if(testFraction + validationFraction > 1.0)
+        if(testFraction + validationFraction >= 1.0)
             throw std::logic_error ("Invalid test and validation fractions: " 
                 + std::to_string(testFraction) + ", " + std::to_string(validationFraction));
 
@@ -95,7 +99,6 @@ public:
             tgtPtrn.TargetVectorSize = tgtPtrn.NumTargetClasses;
         
         TgtPtrnDef = tgtPtrn;
-        DataToDelete = 0;
     }
 
     inline void ResetHighLow(double low, double high)
