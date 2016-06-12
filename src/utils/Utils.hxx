@@ -60,7 +60,7 @@ namespace Utils
     template<typename T>
     inline T iDivUp(T a, T b)
     {
-        return ( a % b ? ((a / b) + 1) : (a / b) );
+        return (a % b ? ((a / b) + 1) : (a / b));
     }
 
     static std::default_random_engine Generator
@@ -126,7 +126,6 @@ namespace StringUtils
 
     inline std::vector<std::string> Split(std::string str, std::string delim, bool trim)
     {
-
         char* tok = strtok(&(str[0]), delim.c_str()); // hell with constness
         std::vector<std::string> tokens(1, tok);
 
@@ -142,6 +141,13 @@ namespace StringUtils
         ValType v;
         std::stringstream(str) >> v;
         return v;
+    }
+
+    inline std::string::const_iterator FindEOL(const std::string& s)
+    {
+        return std::find_if(s.begin(), s.end(),
+            [&](char c) { return c == '\n' || c == '\r'; });
+
     }
 
     inline std::string ToUpper(const std::string& cstr)

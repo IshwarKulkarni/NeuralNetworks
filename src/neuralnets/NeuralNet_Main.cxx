@@ -27,7 +27,11 @@ using namespace Logging;
 using namespace SimpleMatrix;
 
 int main()
-{
+{ 
+    srand(unsigned(time(0)));
+    string s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+    for (size_t i(0); i < 11; ++i)
+        cout << s[Utils::URand<size_t>(s.size())];
 
     //try
     //{
@@ -60,6 +64,7 @@ int main()
 
             cout << "Train Epoch " << i << "> [" << lastCheck << "s]:\tAccuracy: "
                  << res.first * 100 << "%,\t Mean Error: " << res.second << endl;
+            data.ShuffleTrnVldn();
         }
     //}
     //catch (std::exception e)

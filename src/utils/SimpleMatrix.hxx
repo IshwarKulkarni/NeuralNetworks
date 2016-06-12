@@ -1,20 +1,16 @@
 /*
 Copyright (c) Ishwar R. Kulkarni
 All rights reserved.
-
-This file is part of NeuralNetwork Project by 
+This file is part of NeuralNetwork Project by
 Ishwar Kulkarni , see https://github.com/IshwarKulkarni/NeuralNetworks
-
-If you so desire, you can copy, redistribute and/or modify this source 
-along with  rest of the project. However any copy/redistribution, 
-including but not limited to compilation to binaries, must carry 
+If you so desire, you can copy, redistribute and/or modify this source
+along with  rest of the project. However any copy/redistribution,
+including but not limited to compilation to binaries, must carry
 this header in its entirety. A note must be made about the origin
 of your copy.
-
 NeuralNetwork is being distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 FITNESS FOR A PARTICULAR PURPOSE.
-
 */
 
 #ifndef __SIMPLE_MATRIX__
@@ -26,19 +22,21 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <cmath>
 #include <algorithm>
 #include <cstring>
+#include <string>
 #include <fstream>
+#include <type_traits>
 
 #include "Vec23.hxx"
 
 /*
- Simple T** type matrix manipulation;
- 
- Objective:
-    Speed, 
-    Co-location
+Simple T** type matrix manipulation;
+
+Objective:
+Speed,
+Co-location
 Not-Objective:
-    Ease of use, 
-    User Responsibility
+Ease of use,
+User Responsibility
 */
 
 #define for2d2(s,e) \
@@ -128,40 +126,21 @@ namespace SimpleMatrix
         T** data;
         Vec::Size2 size;
         typedef T type;
-        inline Matrix(Vec::Size2 s, T** d = 0) : size(s) { data = d  ? d : ColocAlloc<T>(size); }
-        
-              T& at(Vec::Loc loc)        { return data[loc.y][loc.x]; }
-        const T& at(Vec::Loc loc) const    { return data[loc.y][loc.x]; }
-        
-        inline operator T**() { return data;        }
-        inline void Set(T** d){ Clear();  data = d;    }
-        inline void Clear()      { if(size() && data) deleteColocArray(data); }
-        
+        inline Matrix(Vec::Size2 s, T** d = 0) : size(s) { data = d ? d : ColocAlloc<T>(size); }
+
+        T& at(Vec::Loc loc) { return data[loc.y][loc.x]; }
+        const T& at(Vec::Loc loc) const { return data[loc.y][loc.x]; }
+
+        inline operator T**() { return data; }
+        inline operator bool() { return size(); }
+        inline void Set(T** d) { Clear();  data = d; }
+        inline void Clear() { if (size() && data) deleteColocArray(data); data = nullptr;
+        }
+
         inline unsigned Height()const { return size.y; }
         inline unsigned Width() const { return size.x; }
-        
+
         inline void Fill(const T& v) { std::fill(data[0], data[0] + size(), v); }
-
-        template <typename U, typename Copy>
-        inline Matrix(const Matrix<U>& other, Copy& copier)
-        {
-            if(size != other.size)
-                Clear(), data = ColocAlloc<T>(other.size), size = other.size;
-            std::transform(other.data[0], other.data[0] + size(), data[0], copier);
-        }
-
-        template <typename U>
-        inline Matrix(const Matrix<U>& other)
-        {
-            if (size == other.size)
-#ifdef _MSC_VER
-#pragma warning(disable:4244)
-            std::copy(other.data[0], other.data[0] + size(), data[0]);
-#pragma warning(default:4244)
-#else
-            std::copy(other.data[0], other.data[0] + size(), data[0]);
-#endif
-        }
 
         template<typename U>
         T DotAt(Vec::Loc loc, const Matrix<U>& kernel) const
@@ -183,11 +162,11 @@ namespace SimpleMatrix
             return sum;
         }
 
-       template<typename U>
+        template<typename U>
         T DotCornerAt(Vec::Vec2<size_t> s, const Matrix<U>& kernel) const
         {
             Vec::Vec2<size_t> e = { s.x + kernel.size.x, s.y + kernel.size.y };
-            
+
             T sum = 0;
             for2d2(s, e) sum += at(y, x) * kernel.at(y - s.y, x - s.x);
 
@@ -217,7 +196,7 @@ namespace SimpleMatrix
 
         inline T& operator[](size_t idx) {
 #ifdef _DEBUG
-            if (idx >  size()) throw std::out_of_range("Index invalid: " + std::to_string(idx) );
+            if (idx >  size()) throw std::out_of_range("Index invalid: " + std::to_string(idx));
 #endif
             return data[0][idx];
         }
@@ -228,6 +207,33 @@ namespace SimpleMatrix
 #endif
             return data[0][idx];
         }
+ 
+        inline Matrix<T> Copy()
+        {
+            if (size())
+            {
+                Matrix<T> other = size;
+                std::copy(data[0], data[0] + size(), other.data[0]);
+                return other;
+            }
+            return *this;
+        }
+
+        template <typename U>
+        inline Matrix(const Matrix<U>& other)
+        {
+            if (size == other.size)
+#ifdef _MSC_VER
+#pragma warning(disable:4244)
+                std::copy(other.data[0], other.data[0] + size(), data[0]);
+#pragma warning(default:4244)
+#else
+                std::copy(other.data[0], other.data[0] + size(), data[0]);
+#endif
+        }
+
+    private:
+       
     };
 
     template<typename T>
@@ -236,55 +242,32 @@ namespace SimpleMatrix
         T*** data;
         Vec::Size3 size;
         typedef T type;
-        
-        inline Matrix3(Vec::Size3 s = Vec::Zeroes3, T*** d = 0) : data(d ? d : ColocAlloc<T>(s)) , size(s) {}
 
-              T& at(Vec::Size3 loc)       { return data[loc.z][loc.y][loc.x]; }
+        inline Matrix3(Vec::Size3 s = Vec::Zeroes3, T*** d = 0) : data(d ? d : ColocAlloc<T>(s)), size(s) {}
+
+        T& at(Vec::Size3 loc) { return data[loc.z][loc.y][loc.x]; }
         const T& at(Vec::Size3 loc) const { return data[loc.z][loc.y][loc.x]; }
-        
+
         inline operator T***() { return data; }
         inline void Set(Vec::Size3 s, T*** d = 0)
         {
-            Clear();  size = s; 
-            if ( (data = d) == 0 ) data = ColocAlloc<T>(size);
+            Clear();  size = s;
+            if ((data = d) == 0) data = ColocAlloc<T>(size);
         }
-        inline void ReSet(T*** d) { Clear();  data = d;  }
-        
+        inline void ReSet(T*** d) { Clear();  data = d; }
+
         inline void Clear() { if (size() && data) deleteColocArray(data); }
-        
+
         inline unsigned Depth()  const { return size.z; }
         inline unsigned Height() const { return size.y; }
         inline unsigned Width()  const { return size.x; }
-        
-        inline Matrix3<T> Fill(const T& v) { std::fill(data[0][0], data[0][0] + size(), v); return *this; }
-        
-        template <typename U>
-        inline Matrix3(const Matrix<U>& other)
-        {
-            size.y = other.size.y, size.x = other.size.x;
-            data = ColocAlloc<T>(size);
-            std::copy(other.data[0], other.data[0] + size(), data[0][0]);
-        }
-        
-        template <typename U, typename Copy>
-        inline Matrix3(const Matrix3<U>& other, Copy& copier)
-        {
-            if (size != other.size)
-                Clear(), data = ColocAlloc<T>(other.size), size = other.size;
-            std::transform(other.data[0][0], other.data[0][0] + size(), data[0][0], copier);
-        }
 
-        template <typename U>
-        inline Matrix3(const Matrix3<U>& other)
-        {
-            if (size != other.size)
-                Clear(), data = ColocAlloc<T>(other.size), size = other.size;
-            std::copy(other.data[0][0], other.data[0][0] + size(), data[0][0]);
-        }
-    
+        inline Matrix3<T> Fill(const T& v) { std::fill(data[0][0], data[0][0] + size(), v); return *this; }
+
         // Dot product of two volumes: `kernel` with a bock of *this centered around `loc`
-        template<typename U>
-        T DotAt(Vec::Loc loc, const Matrix3<U>& kernel) const
+        // Why second version? this is called in tight inner loop, branching penalities add up.
+        template<bool PConnection, typename U> // partial connection, why template? Branching overhead avoidance.
+        T DotAt(Vec::Loc loc, const Matrix3<U>& kernel, bool* connection = nullptr) const
         {
             //Logging::Log << "\nAt: " << loc << "\n";
             Vec::Size3 middle = kernel.size / 2; middle.z = 0;
@@ -292,39 +275,42 @@ namespace SimpleMatrix
 #pragma warning( push  )
 #pragma warning( disable : 4267 )
 #endif
-            Vec::Loc start( loc.x - middle.x, loc.y - middle.y);
+            Vec::Loc start(loc.x - middle.x, loc.y - middle.y);
             Vec::Loc   end(start.x + kernel.size.x, start.y + kernel.size.y);
             auto iStart = start;
 #ifdef _MSC_VER
 #pragma warning( pop  )
 #pragma warning( disable : 4267 )
 #endif
-            
+
             start.x = std::max(0, start.x);    start.y = std::max(0, start.y);
             end.x = std::min((int)size.x, end.x); end.y = std::min((int)size.y, end.y);
 
             T sum = 0;
-            for (int z = 0; z < (int)size.z; ++z)
-                for2d2(start,end)
-                    sum += at(z, y, x) * kernel.at(z, y - iStart.y, x - iStart.x);
 
+            for (int z = 0; z < (int)size.z; ++z)
+            {
+                if (PConnection && !connection[z]) continue;
+                for2d2(start, end)
+                    sum += at(z, y, x) * kernel.at(z, y - iStart.y, x - iStart.x);
+            }
             return sum;
         }
 
         inline T& at(int z, int y, int x)
         {
 #ifdef _DEBUG
-            if (x < 0 || y < 0 || z < 0|| x >= int(size.x) || y >= int(size.y)|| z >= int(size.z))
-                throw std::out_of_range("Index invalid: (" + std::to_string(x) + "," + std::to_string(y)+ ","+ std::to_string(z));
+            if (x < 0 || y < 0 || z < 0 || x >= int(size.x) || y >= int(size.y) || z >= int(size.z))
+                throw std::out_of_range("Index invalid: (" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z));
 #endif 
             return data[z][y][x];
         }
-        
+
         inline const T& at(int z, int y, int x) const
         {
 #ifdef _DEBUG
-            if (x < 0 || y < 0 || z < 0 || x >= int(size.x) || y >= int(size.y) || z >= int(size.z) )
-                throw std::out_of_range("Index invalid: (" + std::to_string(x) + "," + std::to_string(y) + ","+std::to_string(z));
+            if (x < 0 || y < 0 || z < 0 || x >= int(size.x) || y >= int(size.y) || z >= int(size.z))
+                throw std::out_of_range("Index invalid: (" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z));
 #endif
             return data[z][y][x];
         }
@@ -333,9 +319,9 @@ namespace SimpleMatrix
         {
 #ifdef _DEBUG
             if (z >= size.z)
-                throw std::out_of_range("Index invalid: " + std::to_string(z) );
+                throw std::out_of_range("Index invalid: " + std::to_string(z));
 #endif 
-            return{ size, data[z]};
+            return{ size, data[z] };
         }
 
         inline const Matrix<T> operator()(size_t z) const
@@ -352,7 +338,7 @@ namespace SimpleMatrix
 
         inline T& operator[](size_t idx) {
 #ifdef _DEBUG
-            if (idx >  size()) throw std::out_of_range("Index invalid: " );
+            if (idx >  size()) throw std::out_of_range("Index invalid: ");
 #endif
             return data[0][0][idx];
         }
@@ -380,27 +366,22 @@ namespace SimpleMatrix
     inline std::ostream& operator<<(std::ostream& out, const Matrix3<T>& k)
     {
         out << k.size;
-        for (size_t i = 0; i < k.size.z; ++i){ out << "\nFrame " << i << " : " << k(i); break; }
+        for (size_t i = 0; i < k.size.z; ++i) { out << "\nFrame " << i << " : " << k(i); }
         return out;
-    } 
-
-    template<typename T>
-    inline std::ostream& operator<<(std::ostream& out, const Matrix<T>& k) {
-        //Out2d(out, k.data, k.size.w, k.size.h, "", 9);
-        OutCSV(out, k, ""); 
-        return out; 
     }
+
+
 
     template<typename T>
     inline void OutCSV(std::ostream& out, const Matrix<T>& k, const char* msg)
     {
-        out << msg << "\n" << std::left << std::setprecision(9);
+        out << msg << std::left << std::setprecision(9);
         for (size_t i = 0; i < k.size.h; ++i)
         {
             out << "\n";
             for (size_t j = 0; j < k.size.w; ++j)
                 out << k.data[i][j] << ",\t";
-            
+
         }
         out << "\n";
         out.flush();
@@ -410,6 +391,10 @@ namespace SimpleMatrix
     inline void Out2d(std::ostream& outStream, T& data, unsigned w, unsigned h, const char* msg = "", unsigned fwidth = 7)
     {
         outStream << msg << "\n";
+
+        if (std::is_same<typename std::remove_const<T>::type, bool**>::value)
+            fwidth = 2;
+        
         unsigned digits = 0;
         unsigned w1 = w; while (w1) w1 /= 10, digits++, outStream << ' ';
         outStream << " |";
@@ -417,20 +402,33 @@ namespace SimpleMatrix
         for (unsigned j = 0; j < w; ++j)
             outStream << std::setw(fwidth + 1) << std::setfill(' ') << std::left << j << " | ";
 
-        std::string dashes(digits+1, '-'); dashes += "|";
-        
+        std::string dashes(digits + 1, '-'); dashes += "|";
+
         std::string d(fwidth + 2, '-');    d += "|-";
-            
+
         for (unsigned j = 0; j < w; ++j) dashes += d;
 
-        outStream << "\n"<< dashes << "\n";
+        bool isFloatType = std::is_floating_point<
+            typename std::remove_const<
+            typename std::remove_reference<decltype(data[0][0])>::type> ::type
+        >::value;
+
+        outStream << "\n" << dashes << "\n";
         for (unsigned i = 0; i < h; ++i)
         {
-            outStream << std::setw(digits + 1) << std::setfill(' ') << i <<  "|";
-            for (unsigned j = 0; j < w ; ++j)
-                outStream    << std::setprecision(fwidth-2) << std::setw(fwidth + 1) << std::setfill('0')
-                            << std::showpoint << std::left
-                            << data[i][j] << " | ";
+            outStream << std::setw(digits + 1) << std::setfill(' ') << i << "|";
+            for (unsigned j = 0; j < w; ++j)
+            {
+                if (isFloatType)
+                    outStream 
+                        << std::setprecision(fwidth - 2) << std::setw(fwidth + 1) << std::setfill('0')
+                            << std::showpoint << std::left;
+                else
+                    outStream
+                    << std::setw(fwidth + 1) << std::setfill(' ') << std::right;
+                    
+                outStream << data[i][j] << " | ";
+            }
 
             outStream << "\n";
         }
@@ -439,64 +437,58 @@ namespace SimpleMatrix
         outStream.flush();
     }
 
-    template <typename T>
-    inline Matrix<T> ReadCSV(std::istream& strm)
+    template<>
+    inline void Out2d(std::ostream& outStream, bool**& data, unsigned w, unsigned h, const char* msg , unsigned fwidth)
     {
-        std::string line;
-        std::getline(strm, line, '\n');
-        unsigned width = unsigned(std::count(line.begin(), line.end(), ',') + 1), height = 0;
-
-        if(!width)
-            throw std::invalid_argument("File is not organized correctly, number of columns appear to be zero");
-
-        strm.seekg(std::ios::beg);
-
-        std::vector<T*> buf;
-        while (strm.good())
+        for (size_t i = 0; i < h; ++i)
         {
-            buf.push_back(new T[width]);
-            char c = '\0';
-            for (unsigned j = 0; j < width - 1; ++j)
-                strm >> buf[height][j] >> c;
-            strm >> buf[height++][width - 1];
+            outStream << "\n";
+            for (size_t j = 0; j < w; ++j)
+                outStream << data[i][j] << ",\t";
         }
+    }
 
-        Matrix<T> out(Vec::Size2(width, height));
-        for (unsigned i = 0; i < buf.size(); ++i)
-            copy(buf[i], buf[i]+width, out[i]);
-
+    template<typename T>
+    inline std::ostream& operator<<(std::ostream& out, const Matrix<T>& k) {
+        Out2d(out, k.data, k.size.w, k.size.h, "", 9);
+        //OutCSV(out, k, "");
         return out;
     }
 
     template <typename T>
-    void ReadCSV(std::istream& strm, unsigned& width, unsigned& height, std::vector<T>& buf)
+    inline Matrix<T> ReadCSV(std::istream& strm)
     {
-        height = 0;
-
         std::string line;
-        std::getline(strm, line, '\n');
-        width = (unsigned)(std::count(line.begin(), line.end(), ',') + 1);
+        std::getline(strm, line);
+        line.erase(line.find_first_of("\n\r"), std::string::npos);
+        
+        size_t width = std::count(line.begin(), line.end(), ',') + 1 ;
 
-        if (!width)
-            throw std::invalid_argument("File is not organized correctly, number of columns appear to be zero");
+        if (!width) throw std::invalid_argument("Bad CSV file: number of columns is zero");
 
         strm.seekg(std::ios::beg);
 
+        std::vector<T> buf;T in;
         while (strm.good())
         {
-            ++height;
-            buf.resize(buf.size() + width); //  gr one r at a time, this is slow, but faster than file read, so forget it.
-            char c = '\0';
-            for (unsigned j = 0; j < width; ++j)
+            char c = strm.peek();
+            if (c == '\n' || c == '\r') break; // empty line read, done.
+            buf.reserve(buf.size() + width);
+            for (size_t j (0); j < width && strm; ++j)
             {
-                strm >> buf[(height - 1)*width + j];
-                c = strm.get();
-                if(strm.good() && c != ',' && j != width - 1)
-                    throw std::invalid_argument("Delimiter is invalid");
+                strm >> in >> c;
+                buf.push_back(in);
             }
+            if (buf.size() % width) throw std::runtime_error("A full row could not be read");
+            if (c != '\n' && c != '\r' && c!=',') strm.putback(c); // we already read a char from next row.
         }
+
+        Matrix<T> out(Vec::Size2(width, buf.size()/width));
+        std::copy(buf.begin(), buf.end(), out.data[0]);
+        
+        return out;
     }
-      
+
     template<typename T>
     void  ReshapeUnmanaged(T**& mat, T*& in, unsigned width, unsigned height) // can convert T to T*, NDim to (N+1)Dim arrays;
     {
@@ -504,7 +496,7 @@ namespace SimpleMatrix
         mat = new T*[height];
         for (size_t i = 0; i < height; i++)
             mat[i] = &(in[i*width]);
-    } 
+    }
 
     template<typename TInner, typename TOuter>
     TOuter** Emplace(TInner* inner, Vec::Size2 innerSize, Vec::Size2 outerSize, Vec::Loc loc = { 0,0 })
@@ -518,7 +510,8 @@ namespace SimpleMatrix
     void Emplace(Matrix<TInner>& inner, Matrix<TInner>& outer, std::unary_function<TInner, TOuter>& conv, Vec::Loc loc = { 0,0 })
     {
         for (unsigned i = loc.y; i < loc.y + inner.y; ++i)
-            std::transform(outer[i], outer[i + inner.size.x], inner[i - loc.y], conv);    }
+            std::transform(outer[i], outer[i + inner.size.x], inner[i - loc.y], conv);
+    }
 
     template<typename T>
     void RoundVertically(Matrix<T>& in, unsigned startCol = 0, unsigned endCol = -1)
@@ -528,12 +521,12 @@ namespace SimpleMatrix
         std::vector<Vec::pair<T> > minmax(endCol - startCol);
 
         for (unsigned i = startCol; i < endCol; ++i)
-            minmax[i-startCol] = { in[0][i], in[0][i] };
+            minmax[i - startCol] = { in[0][i], in[0][i] };
 
         for (unsigned y = 1; y < in.size.y; ++y)
             for (unsigned x = startCol; x < endCol; ++x)
-                 minmax[x-startCol].x = MIN(minmax[x-startCol].x, in.at(y,x)),
-                minmax[x-startCol].y = MAX(minmax[x-startCol].y, in.at(y,x));
+                minmax[x - startCol].x = MIN(minmax[x - startCol].x, in.at(y, x)),
+                minmax[x - startCol].y = MAX(minmax[x - startCol].y, in.at(y, x));
 
 
         for (unsigned i = 0; i < minmax.size(); ++i)
@@ -550,12 +543,18 @@ namespace SimpleMatrix
 
     inline bool MakeFilters()
     {
+        static bool FiltersMade = false;
+        
+        if (FiltersMade) return false;
+
         float sobelV[] = { -1, -2, -1 , 0, 0, 0 ,  1, 2, 1 };
         float sobelH[] = { -1, -0,  1 ,-2, 0, 2 , -1, 0, 1 };
 
         for (unsigned i = 0; i < SobelV.size(); ++i)
             SobelV[i] = sobelV[i], SobelH[i] = sobelH[i];
-        
+
+        FiltersMade = true;
+
         return true;
     }
 

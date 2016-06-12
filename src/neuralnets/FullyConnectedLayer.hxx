@@ -123,15 +123,14 @@ public:
         for (size_t n = 0; n < Neurons.size(); ++n)
             Grads[n] = backError[n] * LGrads[n];
 
-        if (PGrads.size())
+        if (Prev)
         {
             PGrads.Fill(0.0);
             for (unsigned n = 0; n < Neurons.size(); ++n)
-                Neurons[n].BackwardPass(Eta, Grads[n], PGrads , Input);
-        }
+                Neurons[n].BackwardPass(Eta, Grads[n], PGrads, Input);
 
-        if (Prev)
             Prev->BackwardPass(PGrads);
+        }
         else
             for (size_t j = 0; j < Neurons.size(); ++j)
                 Neurons[j].ChangeWeights(Eta, Grads[j], Input);

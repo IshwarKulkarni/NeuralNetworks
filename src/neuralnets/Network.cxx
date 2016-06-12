@@ -2,12 +2,12 @@
 Copyright (c) Ishwar R. Kulkarni
 All rights reserved.
 
-This file is part of NeuralNetwork Project by 
+This file is part of NeuralNetwork Project by
 Ishwar Kulkarni , see https://github.com/IshwarKulkarni/NeuralNetworks
 
-If you so desire, you can copy, redistribute and/or modify this source 
-along with  rest of the project. However any copy/redistribution, 
-including but not limited to compilation to binaries, must carry 
+If you so desire, you can copy, redistribute and/or modify this source
+along with  rest of the project. However any copy/redistribution,
+including but not limited to compilation to binaries, must carry
 this header in its entirety. A note must be made about the origin
 of your copy.
 
@@ -41,20 +41,17 @@ Network::Network(std::string configFile) :
 
     this->ConfigSource = configFile;
 
-    bool networkDescribed = false;
-    char buffer[256];
-    while (inFile && inFile.getline(buffer, 256))
+    std::string line;
+
+    SimpleMatrix::Matrix<bool> ConnectionTable (Vec::Size2( 0, 0 ),nullptr); // just a name;
+    while (inFile && std::getline(inFile,line))
     {
-        std::string line(buffer);
         StringUtils::StrTrim(line);
         if (line.length() == 0 || line[0] == '#')
             continue;
 
         if (StringUtils::beginsWith(line, "->NetworkDescription"))
         {
-            if (networkDescribed)
-                throw std::invalid_argument("You can describe network only once");
-
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndNetworkDescription");
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndNetworkDescription");
@@ -71,7 +68,6 @@ Network::Network(std::string configFile) :
             if ((ErrorFunction = GetErrofFunctionByName(errfName)) == nullptr)
                 throw std::invalid_argument("Cannot find Error function by name: " + errfName);
 
-            networkDescribed = true;
         }
         else if (StringUtils::beginsWith(line, "->ConvLayer"))
         {
@@ -87,7 +83,15 @@ Network::Network(std::string configFile) :
             nvpp.Get("NumKernels", desc.NumberOfKernels);
             nvpp.Get("KernelSize", desc.KernelSize);
             nvpp.Get("KernelStride", desc.KernelStride);
-            nvpp.Get("NumOutputs", desc.NumOuputs);
+
+            if (desc.NumberOfKernels == 0)
+                desc.NumberOfKernels = ConnectionTable.Width();
+            else if (ConnectionTable.Height() && ConnectionTable.Height() != desc.NumberOfKernels)
+            {
+                std::cerr << "Connection Table last described dictates a different number "
+                    << " of outputs (" << ConnectionTable.Width() << ") than described in conv layer descriptor\n";
+                throw std::runtime_error("Bad Conv layer descriptor");
+            }
 
             if (!size() && desc.IpSize() == 0)
                 throw std::invalid_argument("First convolution layer description should have a valid input size");
@@ -98,11 +102,35 @@ Network::Network(std::string configFile) :
                 desc.KernelSize() &&
                 desc.KernelStride())
             {
-                push_back(new ConvolutionLayer(desc, size() ? back() : nullptr));
+             
+                if (ConnectionTable.size())
+                {
+                    push_back(new ConvolutionLayer<true>(desc, ConnectionTable, size() ? back() : nullptr));
+                    ConnectionTable.Clear();
+                }
+                else
+                    push_back(new ConvolutionLayer <false>(desc, ConnectionTable, size() ? back() : nullptr));
             }
             else
                 throw std::invalid_argument("Convolution layer descriptor is ill formed");
 
+        }
+        else if (StringUtils::beginsWith(line, "->ConnectionTable"))
+        {
+            stringstream csvStrm;
+            string lineFull;
+            while (inFile && std::getline(inFile, line) )
+            {
+                StringUtils::StrTrim(line);
+                if (line.length() == 0 || line[0] == '#') continue;
+                if (StringUtils::beginsWith(line, "->EndConnectionTable")) break;
+                csvStrm << line;
+            }
+
+            if (!inFile)
+                throw std::runtime_error("Cannot create connection table unless there's a convolution layer after");
+
+            ConnectionTable = SimpleMatrix::ReadCSV<bool>(csvStrm);
         }
         else if (StringUtils::beginsWith(line, "->AveragePoolingLayer"))
         {
@@ -110,7 +138,7 @@ Network::Network(std::string configFile) :
                 throw std::invalid_argument("Average pooling layer cannot be first layer");
 
             if (dynamic_cast<AveragePoolingLayer*>(back()))
-                Logging::Log << "Two consecutive average layer? Bravo! ";
+                std::cerr << "Two consecutive average layer? Bravo! ";
 
             AvgPooLayerDesc desc;
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndAveragePoolingLayer");

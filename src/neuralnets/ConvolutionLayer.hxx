@@ -2,12 +2,12 @@
 Copyright (c) Ishwar R. Kulkarni
 All rights reserved.
 
-This file is part of NeuralNetwork Project by 
+This file is part of NeuralNetwork Project by
 Ishwar Kulkarni , see https://github.com/IshwarKulkarni/NeuralNetworks
 
-If you so desire, you can copy, redistribute and/or modify this source 
-along with  rest of the project. However any copy/redistribution, 
-including but not limited to compilation to binaries, must carry 
+If you so desire, you can copy, redistribute and/or modify this source
+along with  rest of the project. However any copy/redistribution,
+including but not limited to compilation to binaries, must carry
 this header in its entirety. A note must be made about the origin
 of your copy.
 
@@ -26,21 +26,21 @@ struct ConvLayerDesc
 {
     std::string Name;
     std::string Activation;
-    
+    std::string ConnectionTable;
+
     Vec::Size3  IpSize;
     Vec::Size2  KernelSize;
     Vec::Size2  KernelStride;
-    
+
     size_t      NumberOfKernels;
-    size_t      NumOuputs;
-    
+
     inline ConvLayerDesc() :
         Name("<Unnamed>"),
         Activation("Sigmoid"),
         IpSize(0, 0, 0),
         KernelSize(0, 0),
         KernelStride(0, 0),
-        NumberOfKernels(0){};
+        NumberOfKernels(0) {};
 
     inline ConvLayerDesc(std::string name, std::string actName, Vec::Size3 inSize, Vec::Size2 krSize, Vec::Size2 krStride,
         size_t numKr, size_t numO = 0) :
@@ -49,7 +49,7 @@ struct ConvLayerDesc
         IpSize(inSize),
         KernelSize(krSize),
         KernelStride(krStride),
-        NumberOfKernels(numKr){};
+        NumberOfKernels(numKr) {};
 
 
 private:
@@ -57,6 +57,7 @@ private:
     ConvLayerDesc& operator=(ConvLayerDesc&);
 };
 
+template<bool PConnected>
 struct Kernel : public Volume
 {
     const Vec::Size2 Stride;  // when stride is 1, max overlap; i.e. windows moves 1pixel 
@@ -72,41 +73,47 @@ struct Kernel : public Volume
         for (auto& d : *this) d = CNN_DEBUG ? 0.1 : Utils::URand(-rs, rs);
     }
 
-    inline void Apply( const Volume& IpImage, const Activation* act, Frame Output, Frame LGrads) 
+    inline void Apply(const Volume& IpImage, const Activation* act, Frame Output, Frame LGrads, bool* connection)
     {
-        for (size_t y = 0, oy = 0; y < IpImage.size.y; y += Stride.y, ++oy)
-            for (size_t x = 0, ox = 0; x < IpImage.size.x; x += Stride.x, ++ox)
-                Output.at(oy,ox) = act->Function( IpImage.DotAt(Vec::Loc(int(x), int(y)), *this) + Bias, LGrads.at(oy, ox));
+        for (size_t y = 0, oy = 0; y < IpImage.Height(); y += Stride.y, ++oy)
+            for (size_t x = 0, ox = 0; x < IpImage.Width(); x += Stride.x, ++ox)
+                Output.at(oy, ox) = act->Function(IpImage.DotAt<PConnected>(Vec::Loc(int(x), int(y)), *this, connection) + Bias,LGrads.at(oy, ox) );
     }
 
-    inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, Volume& dW, double eta)
+    inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, Volume& dW, double eta, bool* conn)
     {
-        GetPGrads(gradients, pgrads);
-        ChangeWeights(gradients, inputs, dW, eta);
+        GetPGrads(gradients, pgrads, conn);
+        ChangeWeights(gradients, inputs, dW, eta, conn);
     }
 
-    inline void GetPGrads(Frame& gradients, Volume& pgrads)
+    inline void GetPGrads(Frame& gradients, Volume& pgrads, bool* connection)
     {
-        for (size_t gy = 0; gy < gradients.size.y; ++gy)
-            for (size_t gx = 0; gx < gradients.size.x; ++gx)
+        for (size_t gy = 0; gy < gradients.Height(); ++gy)
+            for (size_t gx = 0; gx < gradients.Width(); ++gx)
             {
-                Vec::Loc3 s = { int(gx * Stride.x - size.x / 2) , int(gy * Stride.y - size.y / 2),0 };
+                Vec::Loc3 s = { int(gx * Stride.x - Width() / 2) , int(gy * Stride.y - Height() / 2),0 };
                 auto      e = s, is = s; e += size;
 
-                s.x = MAX(0, s.x), e.x = MIN(int(pgrads.size.x), e.x);
-                s.y = MAX(0, s.y), e.y = MIN(int(pgrads.size.y), e.y);
+                s.x = MAX(0, s.x), e.x = MIN(int(pgrads.Width()), e.x);
+                s.y = MAX(0, s.y), e.y = MIN(int(pgrads.Height()), e.y);
 
                 double grad = gradients.at(gy, gx);
                 for3d2(s, e)
+                {
+                    if (PConnected && !connection[z]) continue;
                     pgrads.at(z, y, x) += grad * at(z, y - is.y, x - is.x);
+                }
             }
     }
 
-    inline void ChangeWeights(Frame grads, const Volume& ipt, Volume& dW,  double eta)
+    inline void ChangeWeights(Frame grads, const Volume& ipt, Volume& dW, double eta, bool* connection)
     {
         dW.Fill(0.);
-        for3d(size) 
-            dW.at(z, y, x) +=  ipt(z).DotAt(Vec::Loc(x + grads.size.x / 2 - size.x / 2, y + grads.size.y / 2 - size.y / 2), grads);
+        for3d(size)
+        {
+            if (PConnected && !connection[z]) continue;
+            dW.at(z, y, x) += ipt(z).DotAt(Vec::Loc(x + grads.Width() / 2 - Width() / 2, y + grads.Height() / 2 - Height() / 2), grads);
+        }
 
         for3d(size)
             at(z, y, x) -= eta* dW.at(z, y, x);
@@ -124,24 +131,46 @@ struct Kernel : public Volume
     std::ostream& Print(std::ostream& stream)
     {
         //double sum = 0; for (auto& w : *this) sum += w;
-        stream  << " |  Stride: " << Stride
-                << " | Bias: " << Bias
-                << "\nWeights" 
-                << *this;
+        stream 
+            << " |  Stride: " << Stride
+            << " | Bias: " << Bias
+            << "\nWeights"
+            << *this;
 
         return stream;
     }
 };
 
-class ConvolutionLayer  : public Layer
+class ConvolutionLayerBase : public Layer {
+protected:
+    ConvolutionLayerBase(const ConvLayerDesc& desc, Layer* prev = 0) :
+        Layer("ConvLayer-" + desc.Name, desc.IpSize, Kernel<true>::GetOpSize2(desc, prev), desc.Activation, prev) {}
+};
+
+template<bool PartiallyConnected>
+class ConvolutionLayer : public ConvolutionLayerBase
 {
+    SimpleMatrix::Matrix<bool> ConnTable;
 public:
-    ConvolutionLayer(const ConvLayerDesc& desc, Layer* prev = 0) :
-        Layer("ConvLayer-" + desc.Name, desc.IpSize, Kernel::GetOpSize2(desc, prev), desc.Activation, prev)
+    ConvolutionLayer(const ConvLayerDesc& desc, SimpleMatrix::Matrix<bool>& connTable, Layer* prev = 0) :
+        ConvolutionLayerBase(desc, prev),
+        ConnTable(connTable.Copy())
     {
+        if (PartiallyConnected && !ConnTable.size())
+            throw std::invalid_argument("Cannot have Partially connected convolution layer with no connection table.");
+
+        if (PartiallyConnected && prev && prev->Out().Depth() != ConnTable.Width())
+        {
+            std::cerr << "Previous Layer is "; prev->Print("Summary", std::cerr);
+            std::cerr << " with [" << prev->Out().Depth() << "] output frame(s) "
+                << " but connection table has [" << ConnTable.Width()
+                << "] rows:" << ConnTable;
+            throw std::runtime_error(" Bad connection table description ");
+        }
+
         for (unsigned i = 0; i < desc.NumberOfKernels; ++i)
         {
-            Kernels.push_back(Kernel(desc, Layer::InputSize().z));
+            Kernels.push_back(Kernel<PartiallyConnected>(desc, Layer::InputSize().z));
             dW.push_back(Volume(Kernels.back().size));
         }
     }
@@ -149,9 +178,11 @@ public:
     virtual Volume& ForwardPass(Volume& input)
     {
         if (!Prev) Input = input;
-        
+
         for (unsigned i = 0; i < Kernels.size(); ++i)
-            Kernels[i].Apply(input, Act, Output(i), LGrads(i));
+            Kernels[i].Apply(input, Act, Output(i), LGrads(i), PartiallyConnected ? ConnTable.data[i] : nullptr);
+
+        //if (PartiallyConnected) Logging::Log << "Act: " << Output;
 
         if (Next) return Next->ForwardPass(Output);
 
@@ -166,49 +197,52 @@ public:
         {
             PGrads.Fill(0.);
             for (unsigned i = 0; i < Kernels.size(); ++i)
-                Kernels[i].BackwardPass(Grads(i), Prev->Out(), PGrads, dW[i], Eta);
-
-          //  Logging::Log << "backError: " << PGrads;
+                Kernels[i].BackwardPass(Grads(i), Prev->Out(), PGrads, dW[i], Eta, PartiallyConnected?ConnTable.data[i]:nullptr);
 
             Prev->BackwardPass(PGrads);
         }
         else
             for (unsigned i = 0; i < Kernels.size(); ++i)
-                Kernels[i].ChangeWeights(Grads(i), Input, dW[i], Eta);
+                Kernels[i].ChangeWeights(Grads(i), Input, dW[i], Eta, PartiallyConnected ? ConnTable.data[i] : nullptr);
     }
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
         bool all = printList.find("all") != std::string::npos;
-        
+
         if (all || printList.find("Summary") != std::string::npos)
-            out << "\n--> Summary for " << Name << "\t| " << Act->Name << "\t| Eta: " << Eta
+        {
+            out
+                << "\n--> Summary for " << Name 
+                << "\nActivation  : " << Act->Name << "\t| Eta: " << Eta
                 << "\nInput Size  : " << Input.size
                 << "\nNum Kernels : " << Kernels.size()
                 << "\nKernel Size : " << Kernels[0].size << " | Kernel Stride: " << Kernels[0].Stride
-                << "\nOutput Size : " << Output.size
-                << "\n";
-        
+                << "\nOutput Size : " << Output.size << "\n";
+            if (PartiallyConnected)
+                out << "Partial connection:" << std::noboolalpha <<ConnTable;
+        }
+
         if (all || printList.find("Kernels") != std::string::npos)
             for (unsigned i = 0; i < Kernels.size(); ++i)
                 out << "\nKernel " << i << " : " << Kernels[i];
-        
+
         if (all || printList.find("full") != std::string::npos)
-            Layer::Print(printList,out);
+            Layer::Print(printList, out);
 
         out.flush();
     }
 
-    virtual ~ConvolutionLayer() { 
-        for (auto& k : Kernels) k.Clear(); 
+    virtual ~ConvolutionLayer() {
+        for (auto& k : Kernels) k.Clear();
         for (auto& v : dW) v.Clear();
+        if (PartiallyConnected) ConnTable.Clear();
     }
 
 
 private:
-    std::vector<Kernel>  Kernels;
+    std::vector<Kernel<PartiallyConnected>>  Kernels;
     std::vector<Volume> dW;
 };
 
 #endif
- 
