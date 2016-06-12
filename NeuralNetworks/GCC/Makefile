@@ -13,8 +13,8 @@ OBJECTS    := ${SOURCES:.cxx=.o}
 release: 	CPPFLAGS += -DNDEBUG -O3 
 debug: 		CPPFLAGS += -D_DEBUG -Og -O0
 
-debug: 		all
 release: 	all
+debug: 		all
 neuralnet: 	all
 
 all:
