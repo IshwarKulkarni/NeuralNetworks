@@ -165,7 +165,9 @@
     <ClInclude Include="..\..\src\neuralnets\Network.hxx" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\data\MNIST_Network.config" />
+    <None Include="..\..\data\MNIST_Network.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

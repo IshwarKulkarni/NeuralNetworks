@@ -38,7 +38,7 @@ class Network : public std::vector<Layer*>
     Volume ErrFRes;
     double  EtaMultiplier;
     double  EtaDecayRate;
-    size_t  SmallTestRate; // Perform Small Tests while training, after these many training sets
+    size_t  SmallTestRate; // Perform Small Tests while training, after these many training samples
     size_t  SmallTestSize; // Size of such small tests.
     size_t  SmallTestNum;  // number of such tests done.
 

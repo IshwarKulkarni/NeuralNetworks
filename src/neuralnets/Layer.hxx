@@ -55,8 +55,6 @@ public:
         if(!Input.size() && !Prev) throw std::invalid_argument("Input size cannot be zero for a hidden/output layer");
 
         if (Prev) prev->Next = this;
-        
-        else Input.Clear(); // if we alloc'ed Input (i.e. Prev != null), we only need size
     }
 
     inline virtual const Vec::Size3 InputSize() const { return Input.size; }
@@ -115,6 +113,7 @@ public:
         LGrads.Clear();
         Grads.Clear();
         PGrads.Clear();
+        if (Prev) Input.Clear();
     }  
 
 protected:

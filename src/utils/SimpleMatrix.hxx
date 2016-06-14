@@ -151,7 +151,11 @@ namespace SimpleMatrix
         inline operator bool() { return size(); }
         inline void Set(T** d) { Clear();  data = d; }
         inline void Clear() {
-            if (size() && data) deleteColocArray(data); data = nullptr;
+            if (size() && data) {
+                deleteColocArray(data);
+                data = nullptr;
+                size = { 0,0 };
+            }
         }
 
         inline unsigned Height()const { return size.y; }
@@ -223,8 +227,7 @@ namespace SimpleMatrix
 
         inline Matrix<T> Copy()
         {
-            if (size())
-            {
+            if (size()) {
                 Matrix<T> other = size;
                 std::copy(data[0], data[0] + size(), other.data[0]);
                 return other;
@@ -280,7 +283,13 @@ namespace SimpleMatrix
         }
         inline void ReSet(T*** d) { Clear();  data = d; }
 
-        inline void Clear() { if (size() && data) deleteColocArray(data); }
+        inline void Clear() { 
+            if (size() && data) {
+                deleteColocArray(data);
+                data = nullptr;
+                size = { 0,0 };
+            }
+        }
 
         inline unsigned Depth()  const { return size.z; }
         inline unsigned Height() const { return size.y; }
@@ -319,6 +328,20 @@ namespace SimpleMatrix
             }
             return sum;
         }
+
+
+        template<bool PConnection, typename U>
+        inline T DotCornerAt(Vec::Vec3<size_t> s, const Matrix<U>& kernel) const
+        {
+            Vec::Vec3<size_t> e = { s.x + kernel.size.x, s.y + kernel.size.y, size.z};
+
+            T sum = 0;
+            for3d2(s, e)
+                sum += at(y, x) * kernel.at(y - s.y, x - s.x);
+
+            return sum;
+        }
+
 
         inline T& at(int z, int y, int x)
         {

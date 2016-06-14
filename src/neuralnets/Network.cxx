@@ -45,6 +45,7 @@ Network::Network(std::string configFile) :
     std::string line;
 
     SimpleMatrix::Matrix<bool> ConnectionTable (Vec::Size2( 0, 0 ),nullptr); // just a name;
+    
     while (inFile && std::getline(inFile,line))
     {
         StringUtils::StrTrim(line);
@@ -188,7 +189,7 @@ Network::Network(std::string configFile) :
 
                 if (!inSize) inSize = back()->Out().size();
 
-                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, back()));
+                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, size() ? back() : nullptr));
             }
         }
     }
