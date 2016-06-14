@@ -125,7 +125,7 @@ Network::Network(std::string configFile) :
                 StringUtils::StrTrim(line);
                 if (line.length() == 0 || line[0] == '#') continue;
                 if (StringUtils::beginsWith(line, "->EndConnectionTable")) break;
-                csvStrm << line;
+                csvStrm << line << "\n";
             }
 
             if (!inFile)

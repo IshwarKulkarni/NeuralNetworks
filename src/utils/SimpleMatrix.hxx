@@ -475,9 +475,13 @@ namespace SimpleMatrix
     template <typename T>
     inline Matrix<T> ReadCSV(std::istream& strm)
     {
-        std::string line;
-        std::getline(strm, line);
-        line.erase(line.find_first_of("\n\r"), std::string::npos);
+        const size_t BufferSize = 1024;
+        char buffer[BufferSize];
+        strm.getline(buffer, BufferSize, '\r');
+        std::string line(buffer);
+        size_t lineDem = line.find_first_of("\n\r");  // in Windows format there will be an extra '\n'
+        if(lineDem != std::string::npos)
+            line.erase(lineDem, std::string::npos);
 
         size_t width = std::count(line.begin(), line.end(), ',') + 1;
 
