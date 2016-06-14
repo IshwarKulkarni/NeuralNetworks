@@ -32,7 +32,7 @@ int main()
     //{
 
         cout << "Building network..." ;
-        Network nn(DATA_LOCATION "MNIST_Network.config");
+        Network nn(DATA_LOCATION "MNIST_LeNet-5.config");
         cout << " done!" << endl;
         Vec::Size3 in;; unsigned out;
         cout << "\nReading data...";
