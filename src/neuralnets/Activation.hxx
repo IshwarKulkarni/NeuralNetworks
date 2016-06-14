@@ -40,6 +40,13 @@ double inline TanHActivation(double p, double& grad)
     return p;
 }
 
+double inline RELUActivation(double p, double& grad)
+{
+    if (p > 0) grad = 1;
+    else grad = p = 0;
+    return p;
+}
+
 typedef decltype(&SigmoidActivation)        ActivationFunction;
 typedef decltype(&Utils::RoundedCompare)    ResultCmpPredicateType;
 

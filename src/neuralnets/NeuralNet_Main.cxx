@@ -28,13 +28,9 @@ using namespace SimpleMatrix;
 
 int main()
 { 
-    srand(unsigned(time(0)));
-    string s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-    for (size_t i(0); i < 11; ++i)
-        cout << s[Utils::URand<size_t>(s.size())];
-
     //try
     //{
+
         cout << "Building network..." ;
         Network nn(DATA_LOCATION "MNIST_Network.config");
         cout << " done!" << endl;

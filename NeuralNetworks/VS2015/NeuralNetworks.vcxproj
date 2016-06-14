@@ -161,6 +161,7 @@
     <ClInclude Include="..\..\src\neuralnets\ErrorFunctions.hxx" />
     <ClInclude Include="..\..\src\neuralnets\FullyConnectedLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\Layer.hxx" />
+    <ClInclude Include="..\..\src\neuralnets\MaxPoolingLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\Network.hxx" />
   </ItemGroup>
   <ItemGroup>

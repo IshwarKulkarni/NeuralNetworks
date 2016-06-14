@@ -56,6 +56,13 @@ User Responsibility
         for(size_t y = 0; y < pxy.y; ++y) \
              for(size_t x = 0; x < pxy.x; ++x) 
 
+#ifdef _DEBUG
+#define IF_DEBUG(a) if((a))
+#else 
+#define IF_DEBUG(a) if(false)
+#endif
+
+
 namespace SimpleMatrix
 {
     template<typename T>
@@ -128,13 +135,23 @@ namespace SimpleMatrix
         typedef T type;
         inline Matrix(Vec::Size2 s, T** d = 0) : size(s) { data = d ? d : ColocAlloc<T>(size); }
 
-        T& at(Vec::Loc loc) { return data[loc.y][loc.x]; }
-        const T& at(Vec::Loc loc) const { return data[loc.y][loc.x]; }
+        T& at(Vec::Size2 loc) { 
+            IF_DEBUG(loc.x >= size.x || loc.y >= size.y )
+                throw std::out_of_range("Index invalid: ("
+                    + std::to_string(loc.x) + "," + std::to_string(loc.y) + ")"); 
+            return data[loc.y][loc.x]; 
+        }
+        const T& at(Vec::Size2 loc) const { 
+            IF_DEBUG(loc.x >= size.x || loc.y >= size.y )
+                throw std::out_of_range("Index invalid: (" + std::to_string(loc.x) + "," + std::to_string(loc.y) + ")"); 
+            return data[loc.y][loc.x]; 
+        }
 
         inline operator T**() { return data; }
         inline operator bool() { return size(); }
         inline void Set(T** d) { Clear();  data = d; }
-        inline void Clear() { if (size() && data) deleteColocArray(data); data = nullptr;
+        inline void Clear() {
+            if (size() && data) deleteColocArray(data); data = nullptr;
         }
 
         inline unsigned Height()const { return size.y; }
@@ -175,19 +192,16 @@ namespace SimpleMatrix
 
         inline const T& at(int y, int x) const
         {
-#ifdef _DEBUG
-            if (x < 0 || y < 0 || x >= int(size.x) || y >= int(size.y))
+            IF_DEBUG(x < 0 || y < 0 || x >= int(size.x) || y >= int(size.y))
                 throw std::out_of_range("Index invalid: " + std::to_string(x) + "," + std::to_string(y));
-#endif
+
             return data[y][x];
         }
 
         inline T& at(int y, int x)
         {
-#ifdef _DEBUG
-            if (x < 0 || y < 0 || x >= int(size.x) || y >= int(size.y))
+            IF_DEBUG(x < 0 || y < 0 || x >= int(size.x) || y >= int(size.y))
                 throw std::out_of_range("Index invalid: " + std::to_string(x) + "," + std::to_string(y));
-#endif
             return data[y][x];
         }
 
@@ -195,19 +209,18 @@ namespace SimpleMatrix
         inline T* end() { return data[0] + size(); }
 
         inline T& operator[](size_t idx) {
-#ifdef _DEBUG
-            if (idx >  size()) throw std::out_of_range("Index invalid: " + std::to_string(idx));
-#endif
+
+            IF_DEBUG(idx > size()) throw std::out_of_range("Index invalid: " + std::to_string(idx));
+
             return data[0][idx];
         }
 
         inline const T& operator[](size_t idx) const {
-#ifdef _DEBUG
-            if (idx >  size()) throw std::out_of_range("Index invalid: " + std::to_string(idx));
-#endif
+            IF_DEBUG(idx > size()) throw std::out_of_range("Index invalid: " + std::to_string(idx));
+
             return data[0][idx];
         }
- 
+
         inline Matrix<T> Copy()
         {
             if (size())
@@ -233,7 +246,7 @@ namespace SimpleMatrix
         }
 
     private:
-       
+
     };
 
     template<typename T>
@@ -245,8 +258,19 @@ namespace SimpleMatrix
 
         inline Matrix3(Vec::Size3 s = Vec::Zeroes3, T*** d = 0) : data(d ? d : ColocAlloc<T>(s)), size(s) {}
 
-        T& at(Vec::Size3 loc) { return data[loc.z][loc.y][loc.x]; }
-        const T& at(Vec::Size3 loc) const { return data[loc.z][loc.y][loc.x]; }
+        inline T& at(Vec::Size3 loc) {
+            IF_DEBUG(loc.x >= size.x || loc.y >= size.y || loc.z >= size.z)
+                throw std::out_of_range("Index invalid: ("
+                    + std::to_string(loc.x) + "," + std::to_string(loc.y) + "," + std::to_string(loc.z));
+
+            return data[loc.z][loc.y][loc.x];
+        }
+        const T& at(Vec::Size3 loc) const {
+            IF_DEBUG(loc.x >= size.x || loc.y >= size.y || loc.z >= size.z)
+                throw std::out_of_range("Index invalid: ("
+                    + std::to_string(loc.x) + "," + std::to_string(loc.y) + "," + std::to_string(loc.z));
+            return data[loc.z][loc.y][loc.x];
+        }
 
         inline operator T***() { return data; }
         inline void Set(Vec::Size3 s, T*** d = 0)
@@ -265,9 +289,8 @@ namespace SimpleMatrix
         inline Matrix3<T> Fill(const T& v) { std::fill(data[0][0], data[0][0] + size(), v); return *this; }
 
         // Dot product of two volumes: `kernel` with a bock of *this centered around `loc`
-        // Why second version? this is called in tight inner loop, branching penalities add up.
         template<bool PConnection, typename U> // partial connection, why template? Branching overhead avoidance.
-        T DotAt(Vec::Loc loc, const Matrix3<U>& kernel, bool* connection = nullptr) const
+        inline T DotAt(Vec::Loc loc, const Matrix3<U>& kernel, bool* connection = nullptr) const
         {
             //Logging::Log << "\nAt: " << loc << "\n";
             Vec::Size3 middle = kernel.size / 2; middle.z = 0;
@@ -275,6 +298,7 @@ namespace SimpleMatrix
 #pragma warning( push  )
 #pragma warning( disable : 4267 )
 #endif
+
             Vec::Loc start(loc.x - middle.x, loc.y - middle.y);
             Vec::Loc   end(start.x + kernel.size.x, start.y + kernel.size.y);
             auto iStart = start;
@@ -282,7 +306,6 @@ namespace SimpleMatrix
 #pragma warning( pop  )
 #pragma warning( disable : 4267 )
 #endif
-
             start.x = std::max(0, start.x);    start.y = std::max(0, start.y);
             end.x = std::min((int)size.x, end.x); end.y = std::min((int)size.y, end.y);
 
@@ -299,37 +322,33 @@ namespace SimpleMatrix
 
         inline T& at(int z, int y, int x)
         {
-#ifdef _DEBUG
-            if (x < 0 || y < 0 || z < 0 || x >= int(size.x) || y >= int(size.y) || z >= int(size.z))
+
+            IF_DEBUG(x < 0 || y < 0 || z < 0 || x >= int(size.x) || y >= int(size.y) || z >= int(size.z))
                 throw std::out_of_range("Index invalid: (" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z));
-#endif 
+
             return data[z][y][x];
         }
 
         inline const T& at(int z, int y, int x) const
         {
-#ifdef _DEBUG
-            if (x < 0 || y < 0 || z < 0 || x >= int(size.x) || y >= int(size.y) || z >= int(size.z))
+
+            IF_DEBUG(x < 0 || y < 0 || z < 0 || x >= int(size.x) || y >= int(size.y) || z >= int(size.z))
                 throw std::out_of_range("Index invalid: (" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z));
-#endif
+
             return data[z][y][x];
         }
 
         inline Matrix<T> operator()(size_t z)
         {
-#ifdef _DEBUG
-            if (z >= size.z)
-                throw std::out_of_range("Index invalid: " + std::to_string(z));
-#endif 
+            IF_DEBUG(z >= size.z) throw std::out_of_range("Index invalid: " + std::to_string(z));
+
             return{ size, data[z] };
         }
 
         inline const Matrix<T> operator()(size_t z) const
         {
-#ifdef _DEBUG
-            if (z >= size.z)
-                throw std::out_of_range("Index invalid: " + std::to_string(z));
-#endif 
+            IF_DEBUG(z >= size.z) throw std::out_of_range("Index invalid: " + std::to_string(z));
+
             return{ size, data[z] };
         }
 
@@ -337,16 +356,14 @@ namespace SimpleMatrix
         inline T* end()  const { return data[0][0] + size(); }
 
         inline T& operator[](size_t idx) {
-#ifdef _DEBUG
-            if (idx >  size()) throw std::out_of_range("Index invalid: ");
-#endif
+            IF_DEBUG(idx > size()) throw std::out_of_range("Index invalid: ");
+
             return data[0][0][idx];
         }
 
         inline const T& operator[](size_t idx) const {
-#ifdef _DEBUG
-            if (idx >  size()) throw std::out_of_range("Index invalid: ");
-#endif
+            IF_DEBUG(idx > size()) throw std::out_of_range("Index invalid: ");
+
             return data[0][0][idx];
         }
     };
@@ -394,7 +411,7 @@ namespace SimpleMatrix
 
         if (std::is_same<typename std::remove_const<T>::type, bool**>::value)
             fwidth = 2;
-        
+
         unsigned digits = 0;
         unsigned w1 = w; while (w1) w1 /= 10, digits++, outStream << ' ';
         outStream << " |";
@@ -420,13 +437,13 @@ namespace SimpleMatrix
             for (unsigned j = 0; j < w; ++j)
             {
                 if (isFloatType)
-                    outStream 
-                        << std::setprecision(fwidth - 2) << std::setw(fwidth + 1) << std::setfill('0')
-                            << std::showpoint << std::left;
+                    outStream
+                    << std::setprecision(fwidth - 2) << std::setw(fwidth + 1) << std::setfill('0')
+                    << std::showpoint << std::left;
                 else
                     outStream
                     << std::setw(fwidth + 1) << std::setfill(' ') << std::right;
-                    
+
                 outStream << data[i][j] << " | ";
             }
 
@@ -438,7 +455,7 @@ namespace SimpleMatrix
     }
 
     template<>
-    inline void Out2d(std::ostream& outStream, bool**& data, unsigned w, unsigned h, const char* msg , unsigned fwidth)
+    inline void Out2d(std::ostream& outStream, bool**& data, unsigned w, unsigned h, const char* msg, unsigned fwidth)
     {
         for (size_t i = 0; i < h; ++i)
         {
@@ -461,31 +478,31 @@ namespace SimpleMatrix
         std::string line;
         std::getline(strm, line);
         line.erase(line.find_first_of("\n\r"), std::string::npos);
-        
-        size_t width = std::count(line.begin(), line.end(), ',') + 1 ;
+
+        size_t width = std::count(line.begin(), line.end(), ',') + 1;
 
         if (!width) throw std::invalid_argument("Bad CSV file: number of columns is zero");
 
         strm.seekg(std::ios::beg);
 
-        std::vector<T> buf;T in;
+        std::vector<T> buf; T in;
         while (strm.good())
         {
             char c = strm.peek();
             if (c == '\n' || c == '\r') break; // empty line read, done.
             buf.reserve(buf.size() + width);
-            for (size_t j (0); j < width && strm; ++j)
+            for (size_t j(0); j < width && strm; ++j)
             {
                 strm >> in >> c;
                 buf.push_back(in);
             }
             if (buf.size() % width) throw std::runtime_error("A full row could not be read");
-            if (c != '\n' && c != '\r' && c!=',') strm.putback(c); // we already read a char from next row.
+            if (c != '\n' && c != '\r' && c != ',') strm.putback(c); // we already read a char from next row.
         }
 
-        Matrix<T> out(Vec::Size2(width, buf.size()/width));
+        Matrix<T> out(Vec::Size2(width, buf.size() / width));
         std::copy(buf.begin(), buf.end(), out.data[0]);
-        
+
         return out;
     }
 
@@ -544,7 +561,7 @@ namespace SimpleMatrix
     inline bool MakeFilters()
     {
         static bool FiltersMade = false;
-        
+
         if (FiltersMade) return false;
 
         float sobelV[] = { -1, -2, -1 , 0, 0, 0 ,  1, 2, 1 };
@@ -559,4 +576,5 @@ namespace SimpleMatrix
     }
 
 }
+
 #endif

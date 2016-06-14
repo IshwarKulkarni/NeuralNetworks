@@ -19,6 +19,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 
 #include "FullyConnectedLayer.hxx"
 #include "AveragePoolingLayer.hxx"
+#include "MaxPoolingLayer.hxx"
 #include "utils/CommandLine.hxx"
 #include "ConvolutionLayer.hxx"
 #include "Network.hxx"
@@ -134,9 +135,6 @@ Network::Network(std::string configFile) :
         }
         else if (StringUtils::beginsWith(line, "->AveragePoolingLayer"))
         {
-            if (!size())
-                throw std::invalid_argument("Average pooling layer cannot be first layer");
-
             if (dynamic_cast<AveragePoolingLayer*>(back()))
                 std::cerr << "Two consecutive average layer? Bravo! ";
 
@@ -154,9 +152,26 @@ Network::Network(std::string configFile) :
             else
                 throw std::invalid_argument("Average pooling layer descriptor is ill formed");
         }
-        else if (StringUtils::beginsWith(line, "->FullyConnectedLayers"))
+        else if (StringUtils::beginsWith(line, "->MaxPoolingLayer"))
         {
-            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndFullyConnectedLayers");
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndMaxPoolingLayer");
+            if (!nvpp.IsLastLineRead())
+                throw std::runtime_error("End of file found matching ->EndMaxPoolingLayer");
+
+            MaxPoolingLayerDesc desc;
+            nvpp.Get("Name", desc.Name);
+            nvpp.Get("Activation", desc.Activation);
+            nvpp.Get("WindowSize", desc.WindowSize);
+
+            if (desc.Name.length() && GetActivationByName(desc.Activation))
+                push_back(new MaxPoolingLayer(desc, back()));
+            else
+                throw std::invalid_argument("Average pooling layer descriptor is ill formed");
+
+        }
+        else if (StringUtils::beginsWith(line, "->FullyConnectedLayerGroup"))
+        {
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndFullyConnectedLayerGroup");
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndFullyConnectedLayers");
 

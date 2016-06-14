@@ -65,18 +65,16 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is wei
 
     inline void Apply(Volume& in, const Activation* act, Volume out, Volume LGrads) 
     {
-        for (size_t z = 0; z < out.size.z; ++z)
-            for (size_t y = 0; y < out.size.y; ++y)
-            for (size_t x = 0; x < out.size.x; ++x)
-            {
-                double res = 0;
-                for (size_t wy = 0; wy < WindowSize.y; ++wy)
-                    for (size_t wx = 0; wx < WindowSize.x; ++wx)
-                        res += in.at(z, y*WindowSize.y + wy, x*WindowSize.x + wx);
+        for3d(out.size)
+        {
+            double res = 0;
+            for (size_t wy = 0; wy < WindowSize.y; ++wy)
+                for (size_t wx = 0; wx < WindowSize.x; ++wx)
+                    res += in.at(z, y*WindowSize.y + wy, x*WindowSize.x + wx);
 
-                res = res * Scale * at(z).first + at(z).second;
-                out.at(z, y, x) = act->Function(res, LGrads.at(z, y, x));
-            }
+            res = res * Scale * at(z).first + at(z).second;
+            out.at(z, y, x) = act->Function(res, LGrads.at(z, y, x));
+        }
     }
 
     inline void BackwardPass(Volume grads, const Volume& inputs, Volume& pgrads, double eta)
@@ -123,6 +121,7 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is wei
             throw std::invalid_argument("Input size cannot be determined for averaging layer\n");
         if (inSz() < desc.WindowSize())
             throw std::invalid_argument("Averaging window is larger than input size\n");
+        
         return Vec::Size3( Utils::iDivUp(inSz.x, desc.WindowSize.x), Utils::iDivUp(inSz.y,desc.WindowSize.y), inSz.z);
     }
 };

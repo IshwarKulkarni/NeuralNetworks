@@ -56,6 +56,9 @@
     <ClInclude Include="..\..\src\data\CIFAR-ImageReader.hxx">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\MaxPoolingLayer.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\data\MNIST_Network.config">
