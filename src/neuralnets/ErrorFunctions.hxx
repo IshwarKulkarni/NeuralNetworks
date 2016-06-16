@@ -21,7 +21,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #define __ERROR_FUNCTION_INCLUDED__
 
 #include "utils/Utils.hxx"
-#include "utils/simplematrix.hxx"
+#include "utils/SimpleMatrix.hxx"
 #include "memory"
 
 typedef SimpleMatrix::Matrix3<double> Volume;
