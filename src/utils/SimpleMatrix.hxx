@@ -127,22 +127,16 @@ namespace SimpleMatrix
         return Vec::Size3(idx % size.y * size.z, (idx / size.x) % size.z, idx / (size.x*size.y));
     }
 
-    static size_t s2ID = 0;
-
     // Pointers are not freed;
     template<typename T>
     struct Matrix
     {
         T** data;
         Vec::Size2 size;
-        size_t ID;
         
         typedef T type;
         inline Matrix(Vec::Size2 s, T** d = 0) : size(s) {
-            data = d ? d : ColocAlloc<T>(size); ID = s2ID++;
-
-            if(!d)
-                std::cerr << ID << " ++++ Made2\n";
+            data = d ? d : ColocAlloc<T>(size);
         }
 
         T& at(Vec::Size2 loc) { 
@@ -165,7 +159,6 @@ namespace SimpleMatrix
                 deleteColocArray(data);
                 data = nullptr;
                 size = { 0,0 };
-                std::cerr << ID << " ---- Cleared2\n";
             }
         }
 
@@ -263,22 +256,15 @@ namespace SimpleMatrix
 
     };
 
-    static size_t s3ID = 0;
-
     template<typename T>
     struct Matrix3
     {
         T*** data;
         Vec::Size3 size;
         typedef T type;
-        size_t ID;
 
         inline Matrix3(Vec::Size3 s = Vec::Zeroes3, T*** d = 0) : size(s){
             data = d ? d : ColocAlloc<T>(s);
-            ID = s3ID++;
-
-            if(!d)
-                 std::cerr << ID << " ++++ Made3\n";
         }
 
         inline T& at(Vec::Size3 loc) {
@@ -308,7 +294,6 @@ namespace SimpleMatrix
                 deleteColocArray(data);
                 data = nullptr;
                 size = { 0,0 };
-                std::cerr << ID << " ---- Cleared3\n";
             }
         }
 

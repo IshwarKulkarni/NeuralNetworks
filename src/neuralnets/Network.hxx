@@ -65,7 +65,7 @@ public:
             
             back()->BackwardPass(ErrFRes);
 
-            if (SmallTestRate && numTrain % SmallTestRate == 0) 
+            if (numTrain && SmallTestRate && numTrain % SmallTestRate == 0) 
                 SmallTest(begin, NumTrainInEpoc);
         }
         for (auto& l : *this) l->WeightDecay(DecayRate); 
