@@ -108,13 +108,12 @@ public:
         for (auto& n : Neurons) n.InitWeights();
     }
 
-    virtual Volume& ForwardPass(Volume& input)
-    {
-        if (!Prev) Input = input;
+    virtual Volume& ForwardPass()
+    {        
         for (size_t i = 0; i < Neurons.size(); i++)
-            Output[i] = Neurons[i].ForwardPass(input.data[0][0], Act, LGrads[i]);
+            Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
-        if (Next) return Next->ForwardPass(Output);
+        if (Next) return Next->ForwardPass();
         return Output;
     }
 

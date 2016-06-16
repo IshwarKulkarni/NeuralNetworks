@@ -25,6 +25,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <string>
 #include <fstream>
 #include <type_traits>
+#include <iostream>
 
 #include "Vec23.hxx"
 
@@ -126,14 +127,23 @@ namespace SimpleMatrix
         return Vec::Size3(idx % size.y * size.z, (idx / size.x) % size.z, idx / (size.x*size.y));
     }
 
+    static size_t s2ID = 0;
+
     // Pointers are not freed;
     template<typename T>
     struct Matrix
     {
         T** data;
         Vec::Size2 size;
+        size_t ID;
+        
         typedef T type;
-        inline Matrix(Vec::Size2 s, T** d = 0) : size(s) { data = d ? d : ColocAlloc<T>(size); }
+        inline Matrix(Vec::Size2 s, T** d = 0) : size(s) {
+            data = d ? d : ColocAlloc<T>(size); ID = s2ID++;
+
+            if(!d)
+                std::cerr << ID << " ++++ Made2\n";
+        }
 
         T& at(Vec::Size2 loc) { 
             IF_DEBUG(loc.x >= size.x || loc.y >= size.y )
@@ -155,6 +165,7 @@ namespace SimpleMatrix
                 deleteColocArray(data);
                 data = nullptr;
                 size = { 0,0 };
+                std::cerr << ID << " ---- Cleared2\n";
             }
         }
 
@@ -252,14 +263,23 @@ namespace SimpleMatrix
 
     };
 
+    static size_t s3ID = 0;
+
     template<typename T>
     struct Matrix3
     {
         T*** data;
         Vec::Size3 size;
         typedef T type;
+        size_t ID;
 
-        inline Matrix3(Vec::Size3 s = Vec::Zeroes3, T*** d = 0) : data(d ? d : ColocAlloc<T>(s)), size(s) {}
+        inline Matrix3(Vec::Size3 s = Vec::Zeroes3, T*** d = 0) : size(s){
+            data = d ? d : ColocAlloc<T>(s);
+            ID = s3ID++;
+
+            if(!d)
+                 std::cerr << ID << " ++++ Made3\n";
+        }
 
         inline T& at(Vec::Size3 loc) {
             IF_DEBUG(loc.x >= size.x || loc.y >= size.y || loc.z >= size.z)
@@ -288,6 +308,7 @@ namespace SimpleMatrix
                 deleteColocArray(data);
                 data = nullptr;
                 size = { 0,0 };
+                std::cerr << ID << " ---- Cleared3\n";
             }
         }
 
@@ -328,8 +349,7 @@ namespace SimpleMatrix
             }
             return sum;
         }
-
-
+        
         template<bool PConnection, typename U>
         inline T DotCornerAt(Vec::Vec3<size_t> s, const Matrix<U>& kernel) const
         {
@@ -341,7 +361,6 @@ namespace SimpleMatrix
 
             return sum;
         }
-
 
         inline T& at(int z, int y, int x)
         {
@@ -409,9 +428,7 @@ namespace SimpleMatrix
         for (size_t i = 0; i < k.size.z; ++i) { out << "\nFrame " << i << " : " << k(i); }
         return out;
     }
-
-
-
+    
     template<typename T>
     inline void OutCSV(std::ostream& out, const Matrix<T>& k, const char* msg)
     {
@@ -583,24 +600,24 @@ namespace SimpleMatrix
                 in[y][x] = minmax[x - startCol].y ? in[y][x] /= minmax[x - startCol].y : 0;
     }
 
-    static Matrix<float> SobelV(Vec::Size2(3, 3)), SobelH(Vec::Size2(3, 3));
+    //static Matrix<float> SobelV(Vec::Size2(3, 3)), SobelH(Vec::Size2(3, 3));
 
-    inline bool MakeFilters()
-    {
-        static bool FiltersMade = false;
+    //inline bool MakeFilters()
+    //{
+    //    static bool FiltersMade = false;
 
-        if (FiltersMade) return false;
+    //    if (FiltersMade) return false;
 
-        float sobelV[] = { -1, -2, -1 , 0, 0, 0 ,  1, 2, 1 };
-        float sobelH[] = { -1, -0,  1 ,-2, 0, 2 , -1, 0, 1 };
+    //    float sobelV[] = { -1, -2, -1 , 0, 0, 0 ,  1, 2, 1 };
+    //    float sobelH[] = { -1, -0,  1 ,-2, 0, 2 , -1, 0, 1 };
 
-        for (unsigned i = 0; i < SobelV.size(); ++i)
-            SobelV[i] = sobelV[i], SobelH[i] = sobelH[i];
+    //    for (unsigned i = 0; i < SobelV.size(); ++i)
+    //        SobelV[i] = sobelV[i], SobelH[i] = sobelH[i];
 
-        FiltersMade = true;
+    //    FiltersMade = true;
 
-        return true;
-    }
+    //    return true;
+    //}
 
 }
 

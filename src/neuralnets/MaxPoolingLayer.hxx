@@ -74,10 +74,8 @@ public:
                     + std::to_string(desc.WindowSize.x) + ", " + std::to_string(desc.WindowSize.y) +  ")" );
     }
 
-    virtual Volume& ForwardPass(Volume& input)
+    virtual Volume& ForwardPass()
     {
-        if (!Prev) Input = input;
-        
         Vec::Size3 oLoc = { 0,0,0 };
         for (size_t z = 0; z < Input.size.z; ++z)
             for (size_t y = 0; y < Input.size.y; y += Desc.WindowSize.y)
@@ -98,7 +96,7 @@ public:
             MaxIndices.at(oLoc) = mIdx;
         }
 
-        if(Next) return Next->ForwardPass(Output);
+        if(Next) return Next->ForwardPass();
         return Output;
     }
 

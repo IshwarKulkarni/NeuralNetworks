@@ -30,6 +30,10 @@ int main()
 { 
     //try
     //{
+    char* p = new char[15];
+    unsigned char* s = (unsigned char*)p;
+    delete[] s;
+
 
         cout << "Building network..." ;
         Network nn(DATA_LOCATION "MNIST_Network.config");
@@ -45,7 +49,7 @@ int main()
 
         Timer  epochTime("ClassifierTime");
 
-        unsigned maxEpochs = 20;
+        unsigned maxEpochs = 2;
         double   targetAcc = 0.95, acc = 0.;
         
         for (size_t i = 0; i < maxEpochs && acc < targetAcc; i++)
@@ -69,6 +73,7 @@ int main()
     //    throw e;
     //}
 
+        data.Clear();
     return 0;
 }
    

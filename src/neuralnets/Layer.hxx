@@ -46,6 +46,7 @@ public:
         ThisLayerNum(++NumLayers2),
         Name(name + "<" + std::to_string(ThisLayerNum) + ">"),
         Prev(prev),
+        Next(nullptr),
         Output(outSize), LGrads(outSize), Grads(outSize),
         PGrads(prev ? Volume(prev->Output.size) : Vec::Size3(0, 0, 0)),
         Input(prev ? prev->Output : inSize),        
@@ -58,8 +59,9 @@ public:
     }
 
     inline virtual const Vec::Size3 InputSize() const { return Input.size; }
+    inline virtual SimpleMatrix::Matrix3<double>& GetInput() { return Input; }
 
-    virtual Volume& ForwardPass(Volume& input) = 0;
+    virtual Volume& ForwardPass() = 0;
 
     virtual void BackwardPass(Volume& backError) = 0;
 
@@ -69,16 +71,11 @@ public:
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
         bool all = printList.find("all") != std::string::npos;
-        if (all || printList.find("Inputs") != std::string::npos)
-            out << "\nInputs for " << Name << Input;
-        if (all || printList.find("LGradients") != std::string::npos)
-            out << "\nLGradients for " << Name << LGrads;
-        else if (all || printList.find("PGradients") != std::string::npos)
-            out << "\nPGradients for " << Name << PGrads;
-        else if (all || printList.find("Gradients") != std::string::npos)
-            out << "\nGradients for " << Name << Grads;
-        if (all || printList.find("Outputs") != std::string::npos)
-            out << "\nOutputs for " << Name << Output;
+        if (all || printList.find("Inputs") != std::string::npos)  out << "\nInputs for " << Name << Input;
+        if (all || printList.find("LGradients") != std::string::npos)out << "\nLGradients for " << Name << LGrads;
+        else if (all || printList.find("PGradients") != std::string::npos) out << "\nPGradients for " << Name << PGrads;
+        else if (all || printList.find("Gradients") != std::string::npos) out << "\nGradients for " << Name << Grads;
+        if (all || printList.find("Outputs") != std::string::npos) out << "\nOutputs for " << Name << Output;
     }
 
     const Activation* GetAct() const { return Act; }
@@ -113,7 +110,7 @@ public:
         LGrads.Clear();
         Grads.Clear();
         PGrads.Clear();
-        if (Prev) Input.Clear();
+        if (!Prev) Input.Clear();
     }  
 
 protected:

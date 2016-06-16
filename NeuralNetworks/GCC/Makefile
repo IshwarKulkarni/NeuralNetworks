@@ -11,7 +11,7 @@ SOURCES	+= $(shell find ../../src/neuralnets -name *.cxx)
 OBJECTS    := ${SOURCES:.cxx=.o}
 
 release: 	CPPFLAGS += -DNDEBUG -O3 
-debug: 		CPPFLAGS += -D_DEBUG -Og -O0
+debug: 		CPPFLAGS += -D_DEBUG -Og -O0 -ggdb -DGLIBCXX_FORCE_NEW
 
 release: 	all
 debug: 		all

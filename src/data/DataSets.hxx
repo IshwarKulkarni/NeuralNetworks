@@ -83,10 +83,7 @@ public:
         TrainSize(dataSize - TestSetsize - VldnSize),
         Targets(0),
         DataToDelete(nullptr),
-        DataToDelete2(nullptr),
-        DataToDelete3(nullptr),
-        Patterns(dataSize)
-       
+        Patterns(dataSize)       
     {
         if(testFraction + validationFraction >= 1.0)
             throw std::logic_error ("Invalid test and validation fractions: " 
@@ -167,9 +164,8 @@ public:
 
     inline void Clear() 
     {
-        if (Targets) SimpleMatrix::deleteColocArray(Targets); 
-        if (DataToDelete2) SimpleMatrix::deleteColocArray(DataToDelete2); //order is important when 3d arrays are deleted.
-        if (DataToDelete)  delete[] DataToDelete2;
+        if (Targets)        SimpleMatrix::deleteColocArray(Targets); 
+        if (DataToDelete)   SimpleMatrix::deleteColocArray(DataToDelete);
     }
 
     void PrintAllDistributions(std::ostream& out, TargetPatternDef::TargetOutputType type)
@@ -227,14 +223,15 @@ public:
         out << "********\n";
     }
 
-    void SetDataToDelete(TI ptr) { DataToDelete = ptr; }
-    void SetDataToDelete(TI* ptr) { DataToDelete2 = ptr; }
-    void SetDataToDelete(TI** ptr) { DataToDelete3 = ptr; }
+    void SetDataToDelete(TI ptr) {
+        DataToDelete = ptr; 
+    }
+
 
 private:
     unsigned DataSize, TestSetsize, VldnSize, TrainSize;
     double**     Targets;
-    TI           DataToDelete, *DataToDelete2, **DataToDelete3;
+    TI           DataToDelete;
     std::vector<Pattern>    Patterns;
     TargetPatternDef        TgtPtrnDef;
     

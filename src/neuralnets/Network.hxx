@@ -53,27 +53,22 @@ public:
     template<typename TrainIter>
     inline void Train(TrainIter begin, TrainIter end)
     {
-        Volume In = front()->InputSize(); // implicit
-        
         NumTrainInEpoc = std::distance(begin, end);
 
         size_t numTrain = 0;
 
-        for (auto iter = begin; iter != end; ++iter, ++numTrain)
+        for (auto iter = begin; iter != end ; ++iter, ++numTrain)
         {
-            iter->GetInput(In);
+            iter->GetInput(front()->GetInput());
             
-            ErrorFunction->Prime(front()->ForwardPass(In), iter->Target, ErrFRes);
+            ErrorFunction->Prime(front()->ForwardPass(), iter->Target, ErrFRes);
             
             back()->BackwardPass(ErrFRes);
 
             if (SmallTestRate && numTrain % SmallTestRate == 0) 
                 SmallTest(begin, NumTrainInEpoc);
-
         }
         for (auto& l : *this) l->WeightDecay(DecayRate); 
-
-        In.Clear();
     }
 
     template<typename TestIter>
@@ -92,14 +87,12 @@ public:
     {
         NumValCorrect = 0; NumVal = 0; VldnRMSE = 0;
         auto& pred = back()->GetAct()->ResultCmpPredicate;
-        Volume In = front()->InputSize();
-
         size_t numTest = 0;
 
         for (auto iter = begin; iter != end; ++iter, ++numTest)
         {
-            iter->GetInput(In);
-            const auto& out = front()->ForwardPass(In);
+            iter->GetInput(front()->GetInput());
+            const auto& out = front()->ForwardPass();
 
             NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
             ErrorFunction->Apply(out, iter->Target, ErrFRes);
@@ -108,7 +101,6 @@ public:
         
         NumVal = numTest;
         
-        In.Clear();
         return NumValCorrect / NumVal;
     }
 
@@ -133,7 +125,7 @@ public:
         }
 
         const Layer* l = front();
-        do { l->Print(printList, out);  }while ((l = l->NextLayer()) != nullptr);
+        do { l->Print(printList, out); l = l->NextLayer(); } while (l != nullptr);
         out << "===================================================\n\n"; out.flush();
     }
 
@@ -141,7 +133,7 @@ public:
     {
         size_t numLayers = size(), counter = 0;
         const Layer* l = front();
-        do { counter++; } while ((l = l->NextLayer()) != nullptr);
+        do { counter++; l = l->NextLayer(); } while (l != nullptr);
 
         if (counter != numLayers)
             throw std::logic_error("All layers are not linked correctly");
@@ -171,7 +163,10 @@ public:
         return{ NumValCorrect / NumVal , VldnRMSE / NumVal };
     }
 
-    ~Network() { for (auto& l : *this) delete l; }
+    ~Network() { 
+        for (auto& l : *this) delete l; 
+        ErrFRes.Clear();
+    }
 
 
 private:

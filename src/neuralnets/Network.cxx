@@ -204,5 +204,7 @@ Network::Network(std::string configFile) :
 
     Sanity();
 
+    ConnectionTable.Clear();
+
     Print("Network & Summary");
 }

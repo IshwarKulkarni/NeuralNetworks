@@ -175,16 +175,14 @@ public:
         }
     }
 
-    virtual Volume& ForwardPass(Volume& input)
+    virtual Volume& ForwardPass()
     {
-        if (!Prev) Input = input;
-
         for (unsigned i = 0; i < Kernels.size(); ++i)
-            Kernels[i].Apply(input, Act, Output(i), LGrads(i), PartiallyConnected ? ConnTable.data[i] : nullptr);
+            Kernels[i].Apply(Input, Act, Output(i), LGrads(i), PartiallyConnected ? ConnTable.data[i] : nullptr);
 
         //if (PartiallyConnected) Logging::Log << "Act: " << Output;
 
-        if (Next) return Next->ForwardPass(Output);
+        if (Next) return Next->ForwardPass();
 
         return Output;
     }

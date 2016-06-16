@@ -138,16 +138,15 @@ public:
             throw std::invalid_argument("Invalid window size in averagin layer: leaves edges out");
     }
 
-    virtual Volume& ForwardPass(Volume& input)
+    virtual Volume& ForwardPass()
     {
-        if (!Prev) Input = input;
-        Windows.Apply(input, Act, Output, LGrads);
+        Windows.Apply(Input, Act, Output, LGrads);
         
-        if(Next) return Next->ForwardPass(Output);
+        if(Next) return Next->ForwardPass();
         return Output;
     }
 
-    virtual void BackwardPass(Volume& backError)
+    virtual void BackwardPass(Volume& backError) override
     {
 
         for3d(Grads.size) Grads.at(z, y, x) = LGrads.at(z, y, x) * backError.at(z, y, x);
