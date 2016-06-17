@@ -121,9 +121,9 @@ std::pair<unsigned char***, unsigned char*> MNISTReader::ImageDataCopy2D(unsigne
     std::ifstream& imIn = Train ? ImageTrainFstrm : ImageTestFstrm;
     if (!imIn) throw std::invalid_argument("Failed to open MNIST image file.");
     
-    ImageTrainFstrm.seekg(ImageFileOffset);
+    imIn.seekg(ImageFileOffset);
     char*** images = ColocAlloc<char>(Vec::Size3(ImW, ImH, N));
-    ImageTrainFstrm.read(images[0][0], ImageSizeLin * N);
+    imIn.read(images[0][0], ImageSizeLin * N);
     if (imIn.gcount() != N * ImageSizeLin) std::runtime_error("Did not read enough image data");
 
     std::ifstream& lblIn = Train ? LabelTrainFstrm : LabelTestFstrm;

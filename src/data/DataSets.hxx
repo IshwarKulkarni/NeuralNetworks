@@ -82,7 +82,7 @@ public:
         VldnSize(unsigned(dataSize * validationFraction)),
         TrainSize(dataSize - TestSetsize - VldnSize),
         Targets(0),
-        DataToDelete(nullptr),
+        DataToDelete(0),
         Patterns(dataSize)       
     {
         if(testFraction + validationFraction >= 1.0)
@@ -154,7 +154,7 @@ public:
             out << "\nTarget Pattern type   : " <<
                 (TgtPtrnDef.TargetType == TargetPatternDef::UseBinaryArray ? "Binary" : "Unary")
                 << ", with length " << TgtPtrnDef.TargetVectorSize
-                << " {" << int(TgtPtrnDef.FillHigh) << ", " << int(TgtPtrnDef.FillLow) << "}\n";
+                << " {" << TgtPtrnDef.FillHigh << ", " << TgtPtrnDef.FillLow << "}\n";
 
             if (printAllDistributions)  PrintAllDistributions(out, TgtPtrnDef.TargetType);
         }
@@ -165,7 +165,7 @@ public:
     inline void Clear() 
     {
         if (Targets)        SimpleMatrix::deleteColocArray(Targets); 
-        if (DataToDelete)   SimpleMatrix::deleteColocArray(DataToDelete);
+        for(auto& d : DataToDelete)   SimpleMatrix::deleteColocArray(d);
     }
 
     void PrintAllDistributions(std::ostream& out, TargetPatternDef::TargetOutputType type)
@@ -223,15 +223,12 @@ public:
         out << "********\n";
     }
 
-    void SetDataToDelete(TI ptr) {
-        DataToDelete = ptr; 
-    }
-
+    void SetDataToDelete(TI ptr) { DataToDelete.push_back(ptr); }
 
 private:
     unsigned DataSize, TestSetsize, VldnSize, TrainSize;
     double**     Targets;
-    TI           DataToDelete;
+    std::vector<TI>         DataToDelete;
     std::vector<Pattern>    Patterns;
     TargetPatternDef        TgtPtrnDef;
     
@@ -242,7 +239,7 @@ extern void  ReadDataSplitsFromFile();
 
 PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize); // one dimension output
 
-PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = MNISTReader::NumImages);
+PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = MNISTReader::NumImages + MNISTReader::NumTestImages);
 
 PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = CIFAR::NumImages);
 #endif

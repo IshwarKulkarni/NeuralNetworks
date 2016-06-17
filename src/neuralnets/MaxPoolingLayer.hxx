@@ -131,7 +131,7 @@ public:
         out.flush();
     }
 
-    virtual ~MaxPoolingLayer() {  }
+    virtual ~MaxPoolingLayer() { MaxIndices.Clear(); }
 };
 
 #endif

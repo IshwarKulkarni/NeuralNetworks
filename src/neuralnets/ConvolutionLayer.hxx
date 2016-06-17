@@ -180,8 +180,6 @@ public:
         for (unsigned i = 0; i < Kernels.size(); ++i)
             Kernels[i].Apply(Input, Act, Output(i), LGrads(i), PartiallyConnected ? ConnTable.data[i] : nullptr);
 
-        //if (PartiallyConnected) Logging::Log << "Act: " << Output;
-
         if (Next) return Next->ForwardPass();
 
         return Output;

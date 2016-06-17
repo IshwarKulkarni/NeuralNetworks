@@ -36,25 +36,38 @@ double TestFraction = 0.05f;
 PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
 {
     Logging::Timer timer("MNIST2 data load");
-    
+ 
+    if (N > MNISTReader::NumImages + MNISTReader::NumTestImages)
+        throw std::invalid_argument("MNSIT dataset has only 70000 images, queried for " + to_string(N));
+
     InputSize = { MNISTReader::ImW, MNISTReader::ImH, 1 };
     TargetPatternDef targetPattern(10, TargetPatternDef::UseUnaryArray, highlo[0], highlo[1]);
 
     PatternSet<unsigned char***> data(N, VldnFraction, TestFraction, targetPattern);
+
     OutputSize = targetPattern.TargetVectorSize;
 
+    size_t trainImages = N > MNISTReader::NumImages ? MNISTReader::NumImages : N,
+        testImages = N > MNISTReader::NumImages ? N - MNISTReader::NumImages : 0;
+    
     MNISTReader ImageReader(DATA_LOCATION MNISTTHandWriting);
-    auto imageLables = ImageReader.ImageDataCopy2D(N);
+    auto imageLables = ImageReader.ImageDataCopy2D(trainImages);
 
-    for (unsigned i = 0; i < N; ++i)
+    auto testImageLables = testImages > 0 ? ImageReader.ImageDataCopy2D(testImages, false) 
+                                            : make_pair(nullptr, nullptr);
+    for (unsigned i = 0; i < trainImages; ++i)
         data[i].Input = imageLables.first + i,
         data[i].Target = data.GetTarget(imageLables.second[i]);
 
-#ifndef _DEBUG
-    data.ShuffleAll();
-#endif
+    for (unsigned i = MNISTReader::NumImages; i < N; ++i)
+        data[i].Input = testImageLables.first + i - MNISTReader::NumImages,
+        data[i].Target = data.GetTarget(testImageLables.second[i - MNISTReader::NumImages]);
+
+    if (testImageLables.second) delete[] testImageLables.second;
     delete[] imageLables.second;
+
     data.SetDataToDelete(imageLables.first);
+    data.SetDataToDelete(testImageLables.first);
     return std::move(data);
 }
 
