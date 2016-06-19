@@ -18,7 +18,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 */
 
 #include "Network.hxx"
-#include "utils\CommandLine.hxx"
+#include "utils/CommandLine.hxx"
 
 using namespace std;
 using namespace Logging;
@@ -26,21 +26,16 @@ using namespace SimpleMatrix;
 
 int main(int argc, char** argv)
 {
-    //try
-    //{
-
-    cout.rdbuf(cerr.rdbuf());
-
     string dataLoc(DATA_LOCATION), configFile("MNIST_LeNet-5.config");
 
     NameValuePairParser nvpp(argc, argv);
     nvpp.Get("DataLocation", dataLoc);
-    nvpp.Get("ConfigFile", configFile);
+    //nvpp.Get("ConfigFile", configFile);
 
     cout << "Building network ...";
     Network nn(dataLoc + configFile);
     Vec::Size3 in;; unsigned out;
-    cout << " Done \nReading data...";
+    cout << "\nReading data...";
 
     auto data = LoadMnistData2(in, out, nn.GetOutputHiLo());
     data.Summarize(Log, false);
@@ -49,7 +44,7 @@ int main(int argc, char** argv)
 
     Timer  epochTime("ClassifierTime");
 
-    unsigned maxEpochs = 2;
+    unsigned maxEpochs = 40;
     double   targetAcc = 0.95, acc = 0.;
 
     for (size_t i = 0; i < maxEpochs && acc < targetAcc; i++)
@@ -62,23 +57,18 @@ int main(int argc, char** argv)
         nn.Test(data.VldnBegin(), data.VldnEnd());
         auto res = nn.Results(); acc = res.x;
 
-        cout << "Train Epoch " << i << "> [" << lastCheck << "s]:\tAccuracy: "
-            << res.first * 100 << "%,\t Mean Error: " << res.second << endl;
+        Log << "Train Epoch " << i << "> [" << lastCheck << "s]:\tAccuracy: "
+            << res.first * 100 << "%,\t Mean Error: " << res.second << "\n";
+
+        Log << Log.flush;
         data.ShuffleTrnVldn();
     }
 
-    cout << "Running test.. ";
+    Log << "Running test.. ";
     acc = nn.Test(data.TrainBegin(), data.TrainEnd());
-    cout << "Accuracy: " << acc*100 << "%" << endl;
+    Log << "Accuracy: " << acc * 100 << "%\n";
 
-
-
-    //}
-    //catch (std::exception e)
-    //{
-    //    std::cout << e.what() << endl;
-    //    throw e;
-    //}
+    nn.Print("all");
 
     data.Clear();
     return 0;

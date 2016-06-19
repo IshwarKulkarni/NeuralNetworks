@@ -97,24 +97,23 @@ public:
     FullyConnectedLayer(std::string name, unsigned NumInputs, unsigned NumNeurons,  std::string actName, Layer* prev = 0) :
         Layer(
             "FCLayer-" + name, 
-            { NumInputs? NumInputs : prev->Out().size(),1,1}, 
+            { NumInputs? NumInputs : prev->GetOutput().size(),1,1}, 
             { NumNeurons,1,1},
             actName,prev),
-        Neurons(NumNeurons, Neuron(NumInputs ? NumInputs : prev->Out().size()))
+        Neurons(NumNeurons, Neuron(NumInputs ? NumInputs : prev->GetOutput().size()))
     {
-        if (Prev && NumInputs > Prev->Out().size())
+        if (Prev && NumInputs > Prev->GetOutput().size())
             std::invalid_argument("NumInputs in FCLayer is larger than output of previous layer.");
         
         for (auto& n : Neurons) n.InitWeights();
     }
 
-    virtual Volume& ForwardPass()
-    {        
+    virtual void ForwardPass()
+    {
         for (size_t i = 0; i < Neurons.size(); i++)
             Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
-        if (Next) return Next->ForwardPass();
-        return Output;
+        if (Next) Next->ForwardPass();
     }
 
     virtual void BackwardPass(Volume& backError)
@@ -133,14 +132,6 @@ public:
         else
             for (size_t j = 0; j < Neurons.size(); ++j)
                 Neurons[j].ChangeWeights(Eta, Grads[j], Input);
-    }
-
-    inline virtual const Vec::Size3 InputSize() const override {
-        
-        if (Neurons.size())
-            return { Neurons[0].NumWeights(),1,1 };
-        
-        return 0;
     }
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const

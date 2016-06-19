@@ -98,8 +98,7 @@ public:
 
     void ProcessArg(std::string arg)
     {
-        StringUtils::LTrim(arg);
-        StringUtils::RTrim(arg, CommentDelim);
+        StringUtils::RTrim(StringUtils::LTrim(arg), CommentDelim);
         if (!arg.length()) return;
 
 
@@ -120,8 +119,6 @@ public:
                 );
         }
     }
-
-    //const StringPairVector& GetPairs() const { return Pairs;}
 
     template<typename ValType>
     std::vector<std::pair<std::string, ValType> >  GetPairs()
@@ -178,9 +175,8 @@ private:
 
     void Init(std::istream& strm)
     {
-        std::string str;
         const unsigned bufsize = 512;
-        char buf[bufsize];
+        char buf[bufsize] = { 0 };
 
         while (strm.getline(buf, bufsize))
         {
@@ -191,10 +187,10 @@ private:
                 break;
             }
 
-            if(strm.gcount() > bufsize)
-                throw std::overflow_error("Extracted line was too long, Ignoring line\n");
+            if(strm.gcount() >= bufsize)
+                throw std::overflow_error("Extracted line was too long\n");
 
-            ProcessArg(std::string(buf));
+            ProcessArg(buf);
         }
 
             

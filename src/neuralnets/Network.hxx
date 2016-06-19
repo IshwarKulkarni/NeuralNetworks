@@ -2,12 +2,12 @@
 Copyright (c) Ishwar R. Kulkarni
 All rights reserved.
 
-This file is part of NeuralNetwork Project by 
+This file is part of NeuralNetwork Project by
 Ishwar Kulkarni , see https://github.com/IshwarKulkarni/NeuralNetworks
 
-If you so desire, you can copy, redistribute and/or modify this source 
-along with  rest of the project. However any copy/redistribution, 
-including but not limited to compilation to binaries, must carry 
+If you so desire, you can copy, redistribute and/or modify this source
+along with  rest of the project. However any copy/redistribution,
+including but not limited to compilation to binaries, must carry
 this header in its entirety. A note must be made about the origin
 of your copy.
 
@@ -33,6 +33,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 typedef SimpleMatrix::Matrix3<double> Volume;
 typedef SimpleMatrix::Matrix<double> Frame;
 
+// Network holds pointers to a nodes in a doubly linked list of layers.
 class Network : public std::vector<Layer*>
 {
     Volume ErrFRes;
@@ -42,33 +43,37 @@ class Network : public std::vector<Layer*>
     size_t  SmallTestSize; // Size of such small tests.
     size_t  SmallTestNum;  // number of such tests done.
 
-    bool WeightSanityCheck; 
+    bool WeightSanityCheck;
 
     std::shared_ptr<ErrorFunctionType> ErrorFunction;
 
 public:
 
     Network(std::string inFile);
-    
+
     template<typename TrainIter>
     inline void Train(TrainIter begin, TrainIter end)
     {
         NumTrainInEpoc = std::distance(begin, end);
 
         size_t numTrain = 0;
-
-        for (auto iter = begin; iter != end ; ++iter, ++numTrain)
+        Layer *f = front(), *b = back();
+        for (auto iter = begin; iter != end; ++iter, ++numTrain)
         {
-            iter->GetInput(front()->GetInput());
-            
-            ErrorFunction->Prime(front()->ForwardPass(), iter->Target, ErrFRes);
-            
-            back()->BackwardPass(ErrFRes);
+            iter->GetInput(f->GetInput());
+            f->ForwardPass();
 
-            if (numTrain && SmallTestRate && numTrain % SmallTestRate == 0) 
+            ErrorFunction->Prime(b->GetOutput(), iter->Target, ErrFRes);
+
+            b->BackwardPass(ErrFRes);
+
+#ifdef VALGRIND
+            if (numTrain > 2) break;
+#endif
+            if (numTrain && SmallTestRate && numTrain % SmallTestRate == 0)
                 SmallTest(begin, NumTrainInEpoc);
         }
-        for (auto& l : *this) l->WeightDecay(DecayRate); 
+        for (auto& l : *this) l->WeightDecay(DecayRate);
     }
 
     template<typename TestIter>
@@ -81,26 +86,31 @@ public:
         auto res = Results();
         Logging::Log << "\tAcc:\t" << res.x * 100 << "% Error:\t" << res.y << "\n" << Logging::Log.flush;
     }
-    
+
     template<typename TestIter>
     inline double Test(TestIter begin, TestIter end)
     {
         NumValCorrect = 0; NumVal = 0; VldnRMSE = 0;
         auto& pred = back()->GetAct()->ResultCmpPredicate;
         size_t numTest = 0;
-
+        Layer *f = front(), *b = back();
         for (auto iter = begin; iter != end; ++iter, ++numTest)
         {
-            iter->GetInput(front()->GetInput());
-            const auto& out = front()->ForwardPass();
+            iter->GetInput(f->GetInput());
+            f->ForwardPass();
 
+            auto& out = b->GetOutput();
             NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
             ErrorFunction->Apply(out, iter->Target, ErrFRes);
             VldnRMSE += std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
+
+#ifdef VALGRIND
+            if (numTest > 2) break;
+#endif
         }
-        
+
         NumVal = numTest;
-        
+
         return NumValCorrect / NumVal;
     }
 
@@ -112,7 +122,7 @@ public:
         if (printList.find("Network") != std::string::npos)
         {
             out << std::boolalpha
-                << "\nConfig Source : "  << this->ConfigSource
+                << "\nConfig Source : " << this->ConfigSource
                 << "\nNetowrk Description: "
                 << "\nEtaMultiplier : " << EtaMultiplier
                 << "\nErrorFunction : " << ErrorFunction->Name()
@@ -121,35 +131,35 @@ public:
                 << "\nEtaDecayRate  : " << EtaDecayRate
                 << "\nWeightSanityCheck : " << WeightSanityCheck
                 << "\n";
-                
+
         }
 
-        const Layer* l = front();
-        do { l->Print(printList, out); l = l->NextLayer(); } while (l != nullptr);
+        Layer* l = front();
+        do { l->Print(printList, out);  } while ((l = l->NextLayer()) != nullptr);
         out << "===================================================\n\n"; out.flush();
     }
 
     inline void Sanity()
     {
         size_t numLayers = size(), counter = 0;
-        const Layer* l = front();
-        do { counter++; l = l->NextLayer(); } while (l != nullptr);
+        Layer* l = front();
+        do { counter++; } while ((l = l->NextLayer()) != nullptr);
 
         if (counter != numLayers)
             throw std::logic_error("All layers are not linked correctly");
 
         counter = 0; l = back();
-        do { 
-            counter++; 
+        do {
+            counter++;
             auto prev = l->PrevLayer();
-            
-            if (prev && l->InputSize()() > prev->Out().size())
+
+            if (prev && l->GetInput().size() > prev->GetOutput().size())
             {
                 Logging::Log << "This Layer: \n";
                 l->Print("Summary");
                 Logging::Log << "Produces more outputs than following Layer: \n";
                 prev->Print("Summary");
-                throw std::invalid_argument("This condition is an error");
+                throw std::invalid_argument("This condition is an error"); // wow! what a helpful message
             }
             l = prev;
         } while (l != nullptr);
@@ -163,8 +173,8 @@ public:
         return{ NumValCorrect / NumVal , VldnRMSE / NumVal };
     }
 
-    ~Network() { 
-        for (auto& l : *this) delete l; 
+    ~Network() {
+        for (auto& l : *this) delete l;
         ErrFRes.Clear();
     }
 

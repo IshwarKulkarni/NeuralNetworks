@@ -124,7 +124,7 @@ struct Kernel : public Volume
     }
 
     static inline Vec::Size3 GetOpSize2(const ConvLayerDesc& desc, class Layer* prev) {
-        Vec::Size3 inSz = prev ? prev->Out().size : desc.IpSize, stride = desc.KernelStride;
+        Vec::Size3 inSz = prev ? prev->GetOutput().size : desc.IpSize, stride = desc.KernelStride;
         return Vec::Size3(Utils::iDivUp(inSz.x, stride.x), Utils::iDivUp(inSz.y, stride.y), desc.NumberOfKernels);
     }
 
@@ -159,10 +159,10 @@ public:
         if (PartiallyConnected && !ConnTable.size())
             throw std::invalid_argument("Cannot have Partially connected convolution layer with no connection table.");
 
-        if (PartiallyConnected && prev && prev->Out().Depth() != ConnTable.Width())
+        if (PartiallyConnected && prev && prev->GetOutput().Depth() != ConnTable.Width())
         {
             std::cerr << "Previous Layer is "; prev->Print("Summary", std::cerr);
-            std::cerr << " with [" << prev->Out().Depth() << "] output frame(s) "
+            std::cerr << " with [" << prev->GetOutput().Depth() << "] output frame(s) "
                 << " but connection table has [" << ConnTable.Width()
                 << "] rows:" << ConnTable;
             throw std::runtime_error(" Bad connection table description ");
@@ -170,19 +170,17 @@ public:
 
         for (unsigned i = 0; i < desc.NumberOfKernels; ++i)
         {
-            Kernels.push_back(Kernel<PartiallyConnected>(desc, Layer::InputSize().z));
+            Kernels.push_back(Kernel<PartiallyConnected>(desc, Layer::GetInput().size.z));
             dW.push_back(Volume(Kernels.back().size));
         }
     }
 
-    virtual Volume& ForwardPass()
+    virtual void ForwardPass()
     {
         for (unsigned i = 0; i < Kernels.size(); ++i)
             Kernels[i].Apply(Input, Act, Output(i), LGrads(i), PartiallyConnected ? ConnTable.data[i] : nullptr);
 
-        if (Next) return Next->ForwardPass();
-
-        return Output;
+        if (Next) Next->ForwardPass();
     }
 
     virtual void BackwardPass(Volume& backError)
@@ -193,7 +191,7 @@ public:
         {
             PGrads.Fill(0.);
             for (unsigned i = 0; i < Kernels.size(); ++i)
-                Kernels[i].BackwardPass(Grads(i), Prev->Out(), PGrads, dW[i], Eta, PartiallyConnected?ConnTable.data[i]:nullptr);
+                Kernels[i].BackwardPass(Grads(i), Prev->GetOutput(), PGrads, dW[i], Eta, PartiallyConnected ? ConnTable.data[i] : nullptr);
 
             Prev->BackwardPass(PGrads);
         }

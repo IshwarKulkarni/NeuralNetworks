@@ -62,8 +62,9 @@ struct Activation
 inline Activation* GetActivationByName(std::string name)
 {
     static Activation List[] = {
-        {"Sigmoid", SigmoidActivation, Utils::RoundedCompare,  0.01, { 0, 1} },
-        {"TanH",    TanHActivation,    Utils::SameSign,        0.01, {-.8, .8} }
+        {"Sigmoid", SigmoidActivation,  Utils::RoundedCompare,  0.01, { 0, 1} },
+        {"TanH",    TanHActivation,     Utils::SameSign,        0.01, {-.9, .9} },
+        {"RELU",    RELUActivation,     Utils::RoundedCompare,  0.01,{ 0.1, .9 } },
     };
 
     for (unsigned i = 0; i < ARRAY_LENGTH(List); ++i)

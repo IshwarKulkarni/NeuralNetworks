@@ -116,7 +116,7 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is wei
     }
 
     static inline Vec::Size3 GetOpSize(const AvgPooLayerDesc& desc, class Layer* prev) {
-        Vec::Size3 inSz = prev ? prev->Out().size : desc.InputSize;
+        Vec::Size3 inSz = prev ? prev->GetOutput().size : desc.InputSize;
         if (!inSz())
             throw std::invalid_argument("Input size cannot be determined for averaging layer\n");
         if (inSz() < desc.WindowSize())
@@ -130,23 +130,22 @@ class AveragePoolingLayer  : public Layer
 {
 public:
     AveragePoolingLayer(const AvgPooLayerDesc& desc, Layer* prev = 0) :
-        Layer(  "AveragePooling-" + desc.Name, prev->Out().size,
+        Layer(  "AveragePooling-" + desc.Name, prev->GetOutput().size,
                 AveragingKernels::GetOpSize(desc, prev), desc.Activation, prev),
-                Windows(desc.WindowSize, prev->Out().size.z)
+                Windows(desc.WindowSize, prev->GetOutput().size.z)
     {
         if ((Input.size.x % Windows.WindowSize.x) || (Input.size.y % Windows.WindowSize.y) )
             throw std::invalid_argument("Invalid window size in averagin layer: leaves edges out");
     }
 
-    virtual Volume& ForwardPass()
+    virtual void ForwardPass()
     {
         Windows.Apply(Input, Act, Output, LGrads);
         
-        if(Next) return Next->ForwardPass();
-        return Output;
+        if (Next) Next->ForwardPass();
     }
 
-    virtual void BackwardPass(Volume& backError) override
+    virtual void BackwardPass(Volume& backError)
     {
 
         for3d(Grads.size) Grads.at(z, y, x) = LGrads.at(z, y, x) * backError.at(z, y, x);
@@ -154,7 +153,7 @@ public:
         if (Prev)
         {
             PGrads.Fill(0.);
-            Windows.BackwardPass(Grads, Prev->Out(), PGrads, Eta);
+            Windows.BackwardPass(Grads, Prev->GetOutput(), PGrads, Eta);
 
             Prev->BackwardPass(PGrads);
         }

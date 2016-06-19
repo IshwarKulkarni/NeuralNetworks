@@ -36,7 +36,7 @@ double TestFraction = 0.05f;
 PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
 {
     Logging::Timer timer("MNIST2 data load");
- 
+
     if (N > MNISTReader::NumImages + MNISTReader::NumTestImages)
         throw std::invalid_argument("MNSIT dataset has only 70000 images, queried for " + to_string(N));
 
@@ -49,12 +49,12 @@ PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& Out
 
     size_t trainImages = N > MNISTReader::NumImages ? MNISTReader::NumImages : N,
         testImages = N > MNISTReader::NumImages ? N - MNISTReader::NumImages : 0;
-    
+
     MNISTReader ImageReader(DATA_LOCATION MNISTTHandWriting);
     auto imageLables = ImageReader.ImageDataCopy2D(trainImages);
 
-    auto testImageLables = testImages > 0 ? ImageReader.ImageDataCopy2D(testImages, false) 
-                                            : make_pair(nullptr, nullptr);
+    auto testImageLables = testImages > 0 ? ImageReader.ImageDataCopy2D(testImages, false)
+        : make_pair(nullptr, nullptr);
     for (unsigned i = 0; i < trainImages; ++i)
         data[i].Input = imageLables.first + i,
         data[i].Target = data.GetTarget(imageLables.second[i]);
@@ -68,7 +68,7 @@ PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& Out
 
     data.SetDataToDelete(imageLables.first);
     data.SetDataToDelete(testImageLables.first);
-    return std::move(data);
+    return data;
 }
 
 PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)

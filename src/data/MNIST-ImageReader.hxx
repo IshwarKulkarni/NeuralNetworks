@@ -36,6 +36,7 @@ public:
     static const unsigned ImH = 28;
     static const unsigned NumImages = 60000;
     static const unsigned NumTestImages = 10000;
+
     
     MNISTReader(const char* location);
 

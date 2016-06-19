@@ -56,12 +56,10 @@ public:
         if(!Input.size() && !Prev) throw std::invalid_argument("Input size cannot be zero for a hidden/output layer");
 
         if (Prev) prev->Next = this;
+
     }
 
-    inline virtual const Vec::Size3 InputSize() const { return Input.size; }
-    inline virtual SimpleMatrix::Matrix3<double>& GetInput() { return Input; }
-
-    virtual Volume& ForwardPass() = 0;
+    virtual void ForwardPass() = 0;
 
     virtual void BackwardPass(Volume& backError) = 0;
 
@@ -71,20 +69,27 @@ public:
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
         bool all = printList.find("all") != std::string::npos;
-        if (all || printList.find("Inputs") != std::string::npos)  out << "\nInputs for " << Name << Input;
-        if (all || printList.find("LGradients") != std::string::npos)out << "\nLGradients for " << Name << LGrads;
-        else if (all || printList.find("PGradients") != std::string::npos) out << "\nPGradients for " << Name << PGrads;
-        else if (all || printList.find("Gradients") != std::string::npos) out << "\nGradients for " << Name << Grads;
-        if (all || printList.find("Outputs") != std::string::npos) out << "\nOutputs for " << Name << Output;
+        if (all || printList.find("Inputs") != std::string::npos)
+            out << "\nInputs for " << Name << Input;
+        if (all || printList.find("LGradients") != std::string::npos)
+            out << "\nLGradients for " << Name << LGrads;
+        else if (all || printList.find("PGradients") != std::string::npos)
+            out << "\nPGradients for " << Name << PGrads;
+        else if (all || printList.find("Gradients") != std::string::npos)
+            out << "\nGradients for " << Name << Grads;
+        if (all || printList.find("Outputs") != std::string::npos)
+            out << "\nOutputs for " << Name << Output;
     }
 
     const Activation* GetAct() const { return Act; }
 
-    const inline Layer* NextLayer() const { return Next; }
-    const inline Layer* PrevLayer() const { return Prev; }
+    inline Layer* NextLayer() { return Next; }
+    inline Layer* PrevLayer() { return Prev; }
     
-    const Volume Out() const { return Output; }
+    const Volume& GetOutput() const { return Output; }
 
+    inline SimpleMatrix::Matrix3<double>& GetInput()  { return Input; }
+    
     void WeightSanity()    {
         
         const auto& checkIsMessedUp = [&](Volume& toCheck, std::string name)

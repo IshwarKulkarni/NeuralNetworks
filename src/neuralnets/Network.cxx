@@ -45,7 +45,6 @@ Network::Network(std::string configFile) :
     std::string line;
 
     SimpleMatrix::Matrix<bool> ConnectionTable (Vec::Size2( 0, 0 ),nullptr); // just a name;
-    
     while (inFile && std::getline(inFile,line))
     {
         StringUtils::StrTrim(line);
@@ -73,7 +72,6 @@ Network::Network(std::string configFile) :
         }
         else if (StringUtils::beginsWith(line, "->ConvLayer"))
         {
-
             ConvLayerDesc desc; desc.KernelStride = { 1, 1 };
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndConvLayer");
             if (!nvpp.IsLastLineRead())
@@ -85,13 +83,14 @@ Network::Network(std::string configFile) :
             nvpp.Get("NumKernels", desc.NumberOfKernels);
             nvpp.Get("KernelSize", desc.KernelSize);
             nvpp.Get("KernelStride", desc.KernelStride);
-
+            
             if (desc.NumberOfKernels == 0)
                 desc.NumberOfKernels = ConnectionTable.Width();
             else if (ConnectionTable.Height() && ConnectionTable.Height() != desc.NumberOfKernels)
             {
                 std::cerr << "Connection Table last described dictates a different number "
-                    << " of outputs (" << ConnectionTable.Width() << ") than described in conv layer descriptor\n";
+                    << " of outputs (" << ConnectionTable.Width() << ") than described in conv layer descriptor ("
+                    <<  desc.NumberOfKernels << ")\n";
                 throw std::runtime_error("Bad Conv layer descriptor");
             }
 
@@ -104,7 +103,6 @@ Network::Network(std::string configFile) :
                 desc.KernelSize() &&
                 desc.KernelStride())
             {
-             
                 if (ConnectionTable.size())
                 {
                     push_back(new ConvolutionLayer<true>(desc, ConnectionTable, size() ? back() : nullptr));
@@ -115,7 +113,6 @@ Network::Network(std::string configFile) :
             }
             else
                 throw std::invalid_argument("Convolution layer descriptor is ill formed");
-
         }
         else if (StringUtils::beginsWith(line, "->ConnectionTable"))
         {
@@ -187,24 +184,22 @@ Network::Network(std::string configFile) :
 
                 unsigned  inSize = nameSizes[i].second, outSize = nameSizes[i + 1].second;
 
-                if (!inSize) inSize = back()->Out().size();
+                if (!inSize) inSize = back()->GetOutput().size();
 
-                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, size() ? back() : nullptr));
+                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, back()));
             }
         }
     }
 
     if (size())
     {
-        ErrFRes = Volume(back()->Out().size);
+        ErrFRes = Volume(back()->GetOutput().size);
         for (auto* l : *this) l->GetEta() *= EtaMultiplier;
     }
     else
         throw std::invalid_argument("File could not be read!");
 
     Sanity();
-
-    ConnectionTable.Clear();
 
     Print("Network & Summary");
 }

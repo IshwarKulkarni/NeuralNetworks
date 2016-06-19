@@ -83,7 +83,8 @@ public:
         TrainSize(dataSize - TestSetsize - VldnSize),
         Targets(0),
         DataToDelete(0),
-        Patterns(dataSize)       
+        Patterns(dataSize)
+       
     {
         if(testFraction + validationFraction >= 1.0)
             throw std::logic_error ("Invalid test and validation fractions: " 
@@ -154,7 +155,7 @@ public:
             out << "\nTarget Pattern type   : " <<
                 (TgtPtrnDef.TargetType == TargetPatternDef::UseBinaryArray ? "Binary" : "Unary")
                 << ", with length " << TgtPtrnDef.TargetVectorSize
-                << " {" << TgtPtrnDef.FillHigh << ", " << TgtPtrnDef.FillLow << "}\n";
+                << " {" << int(TgtPtrnDef.FillHigh) << ", " << int(TgtPtrnDef.FillLow) << "}\n";
 
             if (printAllDistributions)  PrintAllDistributions(out, TgtPtrnDef.TargetType);
         }
@@ -164,8 +165,8 @@ public:
 
     inline void Clear() 
     {
-        if (Targets)        SimpleMatrix::deleteColocArray(Targets); 
-        for(auto& d : DataToDelete)   SimpleMatrix::deleteColocArray(d);
+        if (Targets) SimpleMatrix::deleteColocArray(Targets); 
+        for(auto& d : DataToDelete)  SimpleMatrix::deleteColocArray(d); 
     }
 
     void PrintAllDistributions(std::ostream& out, TargetPatternDef::TargetOutputType type)
@@ -223,8 +224,8 @@ public:
         out << "********\n";
     }
 
-    void SetDataToDelete(TI ptr) { DataToDelete.push_back(ptr); }
-
+    void SetDataToDelete(TI ptr) { DataToDelete.push_back( ptr ); }
+    
 private:
     unsigned DataSize, TestSetsize, VldnSize, TrainSize;
     double**     Targets;

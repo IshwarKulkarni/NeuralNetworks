@@ -40,7 +40,7 @@ struct MaxPoolingLayerDesc
         WindowSize(windwSize){};
 
     inline Vec::Size3 GetOpSize(class Layer* prev) const {
-        Vec::Size3 inSz = prev ? prev->Out().size : InputSize;
+        Vec::Size3 inSz = prev ? prev->GetOutput().size : InputSize;
         if (!inSz())
             throw std::invalid_argument("Input size cannot be determined for averaging layer\n");
         if (inSz() < WindowSize())
@@ -64,7 +64,7 @@ class MaxPoolingLayer  : public Layer
 
 public:
     MaxPoolingLayer(const MaxPoolingLayerDesc& desc, Layer* prev = 0) :
-        Layer(  "MaxPooling-" + desc.Name, prev->Out().size, desc.GetOpSize(prev), desc.Activation, prev),
+        Layer(  "MaxPooling-" + desc.Name, prev->GetOutput().size, desc.GetOpSize(prev), desc.Activation, prev),
         Desc(desc.Name, desc.Activation,desc.WindowSize),
         MaxIndices(Output.size)
     {
@@ -74,7 +74,7 @@ public:
                     + std::to_string(desc.WindowSize.x) + ", " + std::to_string(desc.WindowSize.y) +  ")" );
     }
 
-    virtual Volume& ForwardPass()
+    virtual void ForwardPass()
     {
         Vec::Size3 oLoc = { 0,0,0 };
         for (size_t z = 0; z < Input.size.z; ++z)
@@ -96,8 +96,7 @@ public:
             MaxIndices.at(oLoc) = mIdx;
         }
 
-        if(Next) return Next->ForwardPass();
-        return Output;
+        if(Next) Next->ForwardPass();
     }
 
     virtual void BackwardPass(Volume& backError)
