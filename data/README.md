@@ -12,7 +12,7 @@ NVPairs : [Name] ":" [Value] [Comment]* [NewLine]
 
 [Name]  : [Char]+ " "
 
-[Value] : [Number|Vec]
+[Value] : [Number|Vec|String]
 
 [Vec] : [Vec2 | Vec3 ]
 
