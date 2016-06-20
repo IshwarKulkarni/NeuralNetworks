@@ -11,10 +11,15 @@ NVPairs occur as name value pairs, all specific name value pairs number in dozen
 NVPairs : [Name] ":" [Value] [Comment]* [NewLine]
 
 [Name]  : [Char]+ " "
+
 [Value] : [Number|Vec]
+
 [Vec] : [Vec2 | Vec3 ]
+
 [Vec] : [ char Integer "," Integer "," char ]
+
 [Vec3] : [ char Integer "," Integer "," Integer "," char ]
+
 [Number] : [Integer | Double] 
 
 ==========================
