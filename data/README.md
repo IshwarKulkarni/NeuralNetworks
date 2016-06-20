@@ -1,9 +1,9 @@
-Rough CFG for config files: 
+Rough CFG for config files :
+
 | is concat, 
 + is one or more, 
 * is zero or more, 
 ? is one or zero)
-
 ^ is OR (i.e. A:B^C is short for A:B, A:C), 
 
 NVPairs occur as name value pairs, all specific name value pairs number in dozen, so skipping
