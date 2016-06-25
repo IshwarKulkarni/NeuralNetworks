@@ -49,7 +49,6 @@ class Network : public std::vector<Layer*> // yeah, thou shalt not inherit from 
 
     size_t NumVal;
     double NumValCorrect, VldnRMSE;
-    double DecayRate;
     std::string ConfigSource;
 
     void push_back(Layer* in)
@@ -116,7 +115,7 @@ public:
             b->BackwardPass(ErrFRes);
             Sanity();
         }
-        for (auto& l : *this) l->WeightDecay(DecayRate);
+        for (auto& l : *this) l->WeightDecay(EtaDecayRate);
     }
 
 

@@ -38,7 +38,7 @@ struct NeuralNetRunParams_t
 
     NeuralNetRunParams_t() :
         DataLoc(DATA_LOCATION), ConfigFile("MNIST_LeNet-5.config"),
-        VldnFrac(0.05), TestFrac(0.05),NumSamples(-1),   MaxEpocs(4), TargetAcc(98),
+        VldnFrac(0.05), TestFrac(0.05),NumSamples(-1),   MaxEpocs(2), TargetAcc(98),
         RunTest(1), TopNFailIms(10)
     {
         GLOBAL_OF_TYPE_WNAME(NumSamples);
@@ -123,6 +123,8 @@ int main(int argc, char** argv)
             << "                     \n" ;
 
         if (nn.Results().first * 100 > rParam.TargetAcc )  break;
+
+        data.ShuffleTrnVldn();
     }
 
 
