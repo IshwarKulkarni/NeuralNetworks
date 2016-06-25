@@ -96,6 +96,8 @@ namespace Vec
 
         template<typename U> Vec2<T> operator+=(const Vec2<U>& o) { x += o.x; y += o.y; return *this; }
         template<typename U> Vec2<T> operator*=(const Vec2<U>& o) { x *= o.x; y *= o.y; return *this; }
+        template<typename U> Vec2<T> operator/=(const Vec2<U>& o) { x /= o.x; y /= o.y; return *this; }
+        template<typename U> Vec2<T> operator/=(const U& o) { x /= o; y /= o; return *this; }
     };
 
     typedef Vec3<size_t> Size3;

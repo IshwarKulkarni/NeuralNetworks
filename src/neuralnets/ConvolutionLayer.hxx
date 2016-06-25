@@ -33,6 +33,7 @@ struct ConvLayerDesc
     Vec::Size2  KernelStride;
 
     size_t      NumberOfKernels;
+    bool        PaddedConvolution;
 
     inline ConvLayerDesc() :
         Name("<Unnamed>"),
@@ -40,7 +41,8 @@ struct ConvLayerDesc
         IpSize(0, 0, 0),
         KernelSize(0, 0),
         KernelStride(0, 0),
-        NumberOfKernels(0) {};
+        NumberOfKernels(0),
+        PaddedConvolution(true){};
 
     inline ConvLayerDesc(std::string name, std::string actName, Vec::Size3 inSize, Vec::Size2 krSize, Vec::Size2 krStride,
         size_t numKr, size_t numO = 0) :
@@ -49,8 +51,8 @@ struct ConvLayerDesc
         IpSize(inSize),
         KernelSize(krSize),
         KernelStride(krStride),
-        NumberOfKernels(numKr) {};
-
+        NumberOfKernels(numKr),
+        PaddedConvolution(true) {};
 
 private:
     ConvLayerDesc(ConvLayerDesc&);
@@ -62,10 +64,12 @@ struct Kernel : public Volume
 {
     const Vec::Size2 Stride;  // when stride is 1, max overlap; i.e. windows moves 1pixel 
     double Bias;
+    bool Padded;
 
     inline Kernel(const ConvLayerDesc& desc, size_t ipSizeZ) :
         Volume(Vec::Size3(desc.KernelSize.x | 1, desc.KernelSize.y | 1, ipSizeZ)), // odd sizes only
-        Stride(desc.KernelStride)
+        Stride(desc.KernelStride),
+        Padded(desc.PaddedConvolution)
     {
         double rs = 1. / sqrt(size());
 
@@ -75,9 +79,15 @@ struct Kernel : public Volume
 
     inline void Apply(const Volume& IpImage, const Activation* act, Frame Output, Frame LGrads, bool* connection)
     {
+        // TODO split this so that we can do for3d, and skip on PConnected. I.e. use Matrix<>::DotAt rather than Matrix3<>
+        if(Padded)
         for (size_t y = 0, oy = 0; y < IpImage.Height(); y += Stride.y, ++oy)
             for (size_t x = 0, ox = 0; x < IpImage.Width(); x += Stride.x, ++ox)
                 Output.at(oy, ox) = act->Function(IpImage.DotAt<PConnected>(Vec::Loc(int(x), int(y)), *this, connection) + Bias,LGrads.at(oy, ox) );
+        else
+        for (size_t y = 0, oy = 0; y < IpImage.Height() - size.y + 1; y += Stride.y, ++oy)
+            for (size_t x = 0, ox = 0; x < IpImage.Width() - size.x + 1; x += Stride.x, ++ox)
+                Output.at(oy, ox) = act->Function(IpImage.DotCornerAt<PConnected>({ x, y }, *this, connection) + Bias, LGrads.at(oy, ox));
     }
 
     inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, Volume& dW, double eta, bool* conn)
@@ -88,6 +98,7 @@ struct Kernel : public Volume
 
     inline void GetPGrads(Frame& gradients, Volume& pgrads, bool* connection)
     {
+        if(Padded)
         for (size_t gy = 0; gy < gradients.Height(); ++gy)
             for (size_t gx = 0; gx < gradients.Width(); ++gx)
             {
@@ -98,21 +109,42 @@ struct Kernel : public Volume
                 s.y = MAX(0, s.y), e.y = MIN(int(pgrads.Height()), e.y);
 
                 double grad = gradients.at(gy, gx);
-                for3d2(s, e)
-                {
-                    if (PConnected && !connection[z]) continue;
-                    pgrads.at(z, y, x) += grad * at(z, y - is.y, x - is.x);
-                }
+                for (size_t z = s.z; z < size_t(e.z); ++z)
+                    if (!PConnected || connection[z])
+                        for (size_t y = s.y; y < size_t(e.y); ++y)
+                            for (size_t x = s.x; x < size_t(e.x); ++x)
+                                pgrads.at(z, y, x) += grad * at(z, y - is.y, x - is.x);
+                
+            }
+        else
+        for (size_t gy = 0; gy < gradients.Height(); ++gy) 
+            for (size_t gx = 0; gx < gradients.Width(); ++gx)
+            { 
+
+                double grad = gradients.at(gy, gx);
+                for (size_t z = 0; z < size.z; ++z)
+                    if (!PConnected || connection[z])
+                        for2d(size)
+                            pgrads.at(z, y + gy, x + gx) += grad * at(z, y, x);
             }
     }
 
     inline void ChangeWeights(Frame grads, const Volume& ipt, Volume& dW, double eta, bool* connection)
     {
         dW.Fill(0.);
-        for3d(size)
+        if (Padded)
         {
-            if (PConnected && !connection[z]) continue;
-            dW.at(z, y, x) += ipt(z).DotAt(Vec::Loc(x + grads.Width() / 2 - Width() / 2, y + grads.Height() / 2 - Height() / 2), grads);
+            for (size_t z = 0; z < size.z; ++z)
+                if (!PConnected || connection[z])
+                for2d(size)
+                    dW.at(z, y, x) += ipt(z).DotAt(Vec::Loc(x + grads.Width() / 2 - Width() / 2, y + grads.Height() / 2 - Height() / 2), grads);
+        }
+        else
+        {
+            for (size_t z = 0; z < size.z; ++z)
+                if (!PConnected || connection[z]) 
+                for2d(size)
+                        dW.at(z, y, x) += ipt(z).DotCornerAt({x , y}, grads);
         }
 
         for3d(size)
@@ -123,8 +155,13 @@ struct Kernel : public Volume
         Bias -= eta * dB;
     }
 
-    static inline Vec::Size3 GetOpSize2(const ConvLayerDesc& desc, class Layer* prev) {
+    static inline Vec::Size3 GetOpSize2(const ConvLayerDesc& desc, class Layer* prev) 
+    {
         Vec::Size3 inSz = prev ? prev->GetOutput().size : desc.IpSize, stride = desc.KernelStride;
+        
+        if (!desc.PaddedConvolution)
+            inSz.x -= desc.KernelSize.x - 1, inSz.y -= desc.KernelSize.y - 1;
+
         return Vec::Size3(Utils::iDivUp(inSz.x, stride.x), Utils::iDivUp(inSz.y, stride.y), desc.NumberOfKernels);
     }
 
@@ -212,7 +249,8 @@ public:
                 << "\nInput Size  : " << Input.size
                 << "\nNum Kernels : " << Kernels.size()
                 << "\nKernel Size : " << Kernels[0].size << " | Kernel Stride: " << Kernels[0].Stride
-                << "\nOutput Size : " << Output.size << "\n";
+                << "\nOutput Size : " << Output.size 
+                << "\nInput Padded: " << (Kernels[0].Padded ? " True\n" : " False\n");
             if (PartiallyConnected)
                 out << "Partial connection:" << std::noboolalpha <<ConnTable;
         }

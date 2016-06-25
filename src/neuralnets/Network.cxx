@@ -30,11 +30,10 @@ using namespace std;
 Network::Network(std::string configFile) :
     EtaMultiplier(1.0),
     EtaDecayRate(1.0),
-    SmallTestRate(0),
-    SmallTestSize(0),
-    SmallTestNum(0),
     WeightSanityCheck(false),
-    ErrorFunction(GetErrofFunctionByName("MeanSquareError"))
+    ErrorFunction(GetErrofFunctionByName("MeanSquareError")),
+    f(nullptr), 
+    b(nullptr)
 {
     std::ifstream inFile(configFile.c_str(), ios::in | ios::binary);
     if (!inFile.good())
@@ -47,27 +46,29 @@ Network::Network(std::string configFile) :
     SimpleMatrix::Matrix<bool> ConnectionTable (Vec::Size2( 0, 0 ),nullptr); // just a name;
     while (inFile && std::getline(inFile,line))
     {
+
         StringUtils::StrTrim(line);
         if (line.length() == 0 || line[0] == '#')
             continue;
 
         if (StringUtils::beginsWith(line, "->NetworkDescription"))
         {
+
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndNetworkDescription");
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndNetworkDescription");
 
-            nvpp.Get("EtaMultiplier", EtaMultiplier);
-            nvpp.Get("EtaDecayRate", EtaDecayRate);
-            nvpp.Get("SmallTestRate", SmallTestRate);
-            nvpp.Get("SmallTestSize", SmallTestSize);
-            nvpp.Get("SmallTestNum", SmallTestNum);
-            nvpp.Get("WeightSanityCheck", WeightSanityCheck);
+            NVPP_GET_TYPE_WNAME(nvpp,EtaMultiplier);
+            NVPP_GET_TYPE_WNAME(nvpp, EtaMultiplier);
+            NVPP_GET_TYPE_WNAME(nvpp, EtaDecayRate);
+            NVPP_GET_TYPE_WNAME(nvpp, WeightSanityCheck);
 
             std::string errfName = "MeanSquareError";
-            nvpp.Get("ErrorFunction", errfName);
+            NVPP_GET_TYPE_WNAME(nvpp,errfName);
             if ((ErrorFunction = GetErrofFunctionByName(errfName)) == nullptr)
                 throw std::invalid_argument("Cannot find Error function by name: " + errfName);
+
+            Print("Network");
 
         }
         else if (StringUtils::beginsWith(line, "->ConvLayer"))
@@ -83,6 +84,7 @@ Network::Network(std::string configFile) :
             nvpp.Get("NumKernels", desc.NumberOfKernels);
             nvpp.Get("KernelSize", desc.KernelSize);
             nvpp.Get("KernelStride", desc.KernelStride);
+            nvpp.Get("Padded",      desc.PaddedConvolution);
             
             if (desc.NumberOfKernels == 0)
                 desc.NumberOfKernels = ConnectionTable.Width();
@@ -105,11 +107,11 @@ Network::Network(std::string configFile) :
             {
                 if (ConnectionTable.size())
                 {
-                    push_back(new ConvolutionLayer<true>(desc, ConnectionTable, size() ? back() : nullptr));
+                    push_back(new ConvolutionLayer<true>(desc, ConnectionTable, b));
                     ConnectionTable.Clear();
                 }
                 else
-                    push_back(new ConvolutionLayer <false>(desc, ConnectionTable, size() ? back() : nullptr));
+                    push_back(new ConvolutionLayer <false>(desc, ConnectionTable, b));
             }
             else
                 throw std::invalid_argument("Convolution layer descriptor is ill formed");
@@ -130,10 +132,11 @@ Network::Network(std::string configFile) :
                 throw std::runtime_error("Cannot create connection table unless there's a convolution layer after");
 
             ConnectionTable = SimpleMatrix::ReadCSV<bool>(csvStrm);
+            continue;
         }
         else if (StringUtils::beginsWith(line, "->AveragePoolingLayer"))
         {
-            if (dynamic_cast<AveragePoolingLayer*>(back()))
+            if (dynamic_cast<AveragePoolingLayer*>(b))
                 std::cerr << "Two consecutive average layer? Bravo! ";
 
             AvgPooLayerDesc desc;
@@ -146,7 +149,7 @@ Network::Network(std::string configFile) :
             nvpp.Get("WindowSize", desc.WindowSize);
 
             if (desc.Name.length() && GetActivationByName(desc.Activation))
-                push_back(new AveragePoolingLayer(desc, back()));
+                push_back(new AveragePoolingLayer(desc, b));
             else
                 throw std::invalid_argument("Average pooling layer descriptor is ill formed");
         }
@@ -162,7 +165,7 @@ Network::Network(std::string configFile) :
             nvpp.Get("WindowSize", desc.WindowSize);
 
             if (desc.Name.length() && GetActivationByName(desc.Activation))
-                push_back(new MaxPoolingLayer(desc, back()));
+                push_back(new MaxPoolingLayer(desc, b));
             else
                 throw std::invalid_argument("Average pooling layer descriptor is ill formed");
 
@@ -184,16 +187,17 @@ Network::Network(std::string configFile) :
 
                 unsigned  inSize = nameSizes[i].second, outSize = nameSizes[i + 1].second;
 
-                if (!inSize) inSize = back()->GetOutput().size();
+                if (!inSize) inSize = b->GetOutput().size();
 
-                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, back()));
+                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, b));
             }
         }
+
     }
 
     if (size())
     {
-        ErrFRes = Volume(back()->GetOutput().size);
+        ErrFRes = Volume(b->GetOutput().size);
         for (auto* l : *this) l->GetEta() *= EtaMultiplier;
     }
     else
@@ -201,5 +205,5 @@ Network::Network(std::string configFile) :
 
     Sanity();
 
-    Print("Network & Summary");
+    //Print("Network & Summary");
 }

@@ -31,6 +31,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <set>
 
 #define ARRAY_LENGTH(arr)    (arr == 0 ? 0 : sizeof(arr)/sizeof(arr[0]) )
 #define ARRAYEND(arr) (arr + ARRAY_LENGTH(arr))
@@ -75,6 +76,52 @@ namespace Utils
     {
         return (T)(low + distribution(Generator)*(high - low) / 100.0);
     }
+    template<typename Node> // Node should support < operator
+    class TopN  
+    {
+        std::set<Node> Set;
+
+    public:
+        typedef std::set<Node> BaseMapType;
+        const size_t N;
+        TopN(size_t n) : N(n) {} 
+        size_t SetSize(size_t nN) { size_t oN = N; N = nN; return nN; }
+        void insert(const Node & val)
+        {
+            Set.insert(val);
+            if (Set.size() > N) 
+                Set.erase(begin());
+        }
+        typename BaseMapType::iterator begin() { return Set.begin(); }
+        typename BaseMapType::iterator   end() { return Set.end(); }
+        void clear()  { return Set.clear(); }
+        size_t size() { return Set.size(); }
+    private:
+        TopN(TopN&);
+    };
+    inline const char *Rubout(int i)
+    {
+        if (i < 0) i = -10 * i; // Add a backspace for the negative sign.
+        if (i < 10) return "\b";
+        if (i < 100) return "\b\b";
+        if (i < 1000) return "\b\b\b";
+        return "\b\b\b\b";
+    }
+
+    inline double TimeSince(std::chrono::high_resolution_clock::time_point& since)
+    {
+        auto now = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = std::chrono::duration_cast<std::chrono::duration<double>>(now - 
+            since);
+        return duration.count();
+    }
+
+    template<typename T>
+    void WriteRawBytes(std::ostream& o, const T& t)
+    {
+        o.write(static_cast<const char*>(&t), sizeof(t));
+    }
+
 }
 
 namespace PPMIO

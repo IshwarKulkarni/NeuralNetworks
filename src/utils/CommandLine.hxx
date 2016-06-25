@@ -29,6 +29,11 @@ FITNESS FOR A PARTICULAR PURPOSE.
 
 #include "Utils.hxx"
 
+#define NVPP_DECL_GET_TYPE(NVPPOBJ, TYPE, VARNAME, OPTNAME, INIT) TYPE VARNAME= INIT; NVPPOBJ.Get(OPTNAME,VARNAME);
+#define NVPP_GET_TYPE_WNAME(NVPPOBJ, OPTNAME) NVPPOBJ.Get(#OPTNAME,OPTNAME);
+
+#define GLOBAL_OF_TYPE_WNAME_I(TYPE, OPTNAME, INIT) TYPE OPTNAME= INIT; NameValuePairParser::GlobalNVPP().Get(#OPTNAME,OPTNAME);
+#define GLOBAL_OF_TYPE_WNAME(OPTNAME) NameValuePairParser::GlobalNVPP().Get(#OPTNAME,OPTNAME);
 // This file started out as a function to parse command line. Now it's a way of retrieving name value pairs form different sources.
 // It's not even its final form!
 
@@ -43,7 +48,7 @@ private:
     std::string Separator;  // when there are multiple arguments passed as name value pairs, each arg is preceded by a \Separator
     char ArgDelim;          // \ArgDelim separates the name from value e.g. in "-name=value" (defaults of the first constructor) ArgDelim is '=' and Separator is "-"
     std::string CommentDelim;        // if \CommentDelim is the first char, that kills the string.
-    const std::string LastLineToRead; // when processing a file, stop after reading line that begins with this.
+    std::string LastLineToRead; // when processing a file, stop after reading line that begins with this.
     bool LastLineRead;
 
     std::vector<std::string> Prefixes; // arguments that do not follow " <ArgDelim>name<Separator>value " format, example the prog name, i.e. argv[0] in arguments to main()
@@ -66,13 +71,18 @@ public:
         LastLineToRead(lastLine),
         LastLineRead(false)
     {    
-        if(StringUtils::HasWSpace(separator))
-            throw std::invalid_argument(separator + " is not a valid separator for the NameValue Pair, cannot contain spaces\n");
+        LikeMain(separator, argv, argc);
+    }
 
-        Prefixes.push_back(argv[0]); // program name, argv[0]
-
-        for (unsigned i = 1; i < argc; ++i)
-           ProcessArg(argv[i]);
+    static void MakeGlobalNVPP(unsigned argc, char** argv,     //  main() args
+        std::string separator = "=", char argDelim = '-', std::string comDelim = "", std::string lastLine = "")
+    {
+        GlobalNVPP().Separator = separator;
+        GlobalNVPP().ArgDelim = argDelim;
+        GlobalNVPP().CommentDelim = comDelim;
+        GlobalNVPP().LastLineToRead = lastLine;
+        GlobalNVPP().LastLineRead = false;
+        GlobalNVPP().LikeMain(separator, argv, argc);
     }
 
     NameValuePairParser(const std::string& argString, const std::string& separator ,  char argDelim = '\0',  std::string comDelim = "", std::string lastLine = ""):
@@ -164,7 +174,18 @@ public:
     
     inline void Die() {  Pairs.clear();  Prefixes.clear(); }
 
+    static NameValuePairParser& GlobalNVPP(){ static NameValuePairParser StaticObj; return StaticObj; }
 private:
+    NameValuePairParser() {}
+    static NameValuePairParser StaticObj;
+    void LikeMain(std::string separator, char** argv, unsigned argc)
+    {
+        if (StringUtils::HasWSpace(separator))
+            throw std::invalid_argument(separator + " is not a valid separator for the NameValue Pair, cannot contain spaces\n");
+        Prefixes.push_back(argv[0]); // program name, argv[0]
+        for (unsigned i = 1; i < argc; ++i)
+            ProcessArg(argv[i]);
+    }
 
     inline std::string PreprocessName(const std::string& name) const
     {

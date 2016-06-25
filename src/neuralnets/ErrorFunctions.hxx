@@ -58,16 +58,15 @@ public:
 
     virtual inline void Prime(const Volume& out, const double* target, Volume& res) const override
     {
-        
         for (size_t i = 0; i < out.size(); ++i)
-            res[i] = -target[i] * std::log(out[i]) - (1. - target[i]) * std::log(1. - out[i]);
+            res[i] = (out[i] - target[i]) / (out[i] * (1. - target[i]));            
     }
 
     inline void  Apply(const Volume& out, const double* target, Volume& res) const override
     {
-
         for (size_t i = 0; i < out.size(); ++i)
-            res[i] = (out[i] - target[i]) / (out[i] * (1. - target[i]) );
+            res[i] = -target[i] * std::log(out[i]) - (1. - target[i]) * std::log(1. - out[i]);
+            
     }
 };
 

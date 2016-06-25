@@ -48,7 +48,7 @@ public:
         Prev(prev),
         Next(nullptr),
         Output(outSize), LGrads(outSize), Grads(outSize),
-        PGrads(prev ? Volume(prev->Output.size) : Vec::Size3(0, 0, 0)),
+        PGrads(prev ? Volume(prev->Output.size) : Vec::Size3(0, 0, 0)), // I want to eliminate this as = prev->Grad
         Input(prev ? prev->Output : inSize),        
         Act(GetActivationByName(actName)),
         Eta(Act->Eta)
@@ -56,6 +56,21 @@ public:
         if(!Input.size() && !Prev) throw std::invalid_argument("Input size cannot be zero for a hidden/output layer");
 
         if (Prev) prev->Next = this;
+
+        if(!outSize()) throw std::runtime_error("Output size cannot be zero size in Layer " + Name);
+        
+        if(Prev && !PGrads.size()) 
+            throw std::runtime_error("PGrads cannot have zero size in Layer " + Name);
+        
+        if (!Prev && !Input.size()) 
+            throw std::runtime_error("Input cannot have zero size in Layer " + Name);
+
+        if(Act == nullptr) throw std::runtime_error("Activation function not found for Name " + actName);
+        if (Eta <= 0) throw std::runtime_error("Eta cannot be less than or equal to zero. Is  " + std::to_string(Eta));
+
+#ifdef _DEBUG
+        Eta *= 20;
+#endif
 
     }
 
@@ -109,7 +124,7 @@ public:
         checkIsMessedUp(Grads, "Gradients for " + Name);
         checkIsMessedUp(Output, "Outputs for " + Name);
     }
-    
+
     virtual ~Layer() {
         Output.Clear();
         LGrads.Clear();
@@ -123,6 +138,7 @@ protected:
     const std::string Name;
     Layer             *Prev, *Next;
 
+    // TODO Eliminate PGrads ( = prev->Grad )
     Volume      Output, LGrads, Grads, PGrads;
     Volume      Input;
     Activation* Act;

@@ -54,7 +54,7 @@ struct TargetPatternDef
 struct Char255ToDoubleVolume {
     inline void operator()(unsigned char*** in, SimpleMatrix::Matrix3<double>& out) {
         auto inLin = in[0][0];
-        for (auto& o : out) o = double(*inLin++) / 255;
+        for (auto& o : out) o = double(*inLin++) /255;
     }
 };
 
@@ -65,6 +65,8 @@ class PatternSet
     {
         ConverterType Converter;
         TI Input;
+        // Copy of following function exists in each Pattern object, 
+        // but I don't know how get rid of it cleanly.
         void GetInput(SimpleMatrix::Matrix3<double>& V) { Converter(Input, V); }
         double* Target;
     };
@@ -224,7 +226,10 @@ public:
         out << "********\n";
     }
 
-    void SetDataToDelete(TI ptr) { DataToDelete.push_back( ptr ); }
+    void SetDataToDelete(TI ptr) { 
+        if(ptr)
+            DataToDelete.push_back( ptr ); 
+    }
     
 private:
     unsigned DataSize, TestSetsize, VldnSize, TrainSize;
@@ -237,6 +242,8 @@ private:
 };
 
 extern void  ReadDataSplitsFromFile();
+
+Vec::Vec2<double> SetVldnTestFractions(double vldn, double test);
 
 PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize); // one dimension output
 

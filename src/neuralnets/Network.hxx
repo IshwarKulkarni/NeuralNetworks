@@ -24,6 +24,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <fstream>
 #include <vector>
 #include <memory>
+#include <bitset>
 
 #include "Layer.hxx"
 #include "utils/SimpleMatrix.hxx"
@@ -34,66 +35,99 @@ typedef SimpleMatrix::Matrix3<double> Volume;
 typedef SimpleMatrix::Matrix<double> Frame;
 
 // Network holds pointers to a nodes in a doubly linked list of layers.
-class Network : public std::vector<Layer*>
+class Network : public std::vector<Layer*> // yeah, thou shalt not inherit from STL containers! Sue me!
 {
     Volume ErrFRes;
     double  EtaMultiplier;
     double  EtaDecayRate;
-    size_t  SmallTestRate; // Perform Small Tests while training, after these many training samples
-    size_t  SmallTestSize; // Size of such small tests.
-    size_t  SmallTestNum;  // number of such tests done.
 
     bool WeightSanityCheck;
-
+    
     std::shared_ptr<ErrorFunctionType> ErrorFunction;
+
+    Layer *f, *b;
+
+    size_t NumVal;
+    double NumValCorrect, VldnRMSE;
+    double DecayRate;
+    std::string ConfigSource;
+
+    void push_back(Layer* in)
+    {
+        if (!in) throw std::runtime_error("Pushed null Layer\n");
+        if (!f) f = in;
+        b = in;
+        std::vector<Layer*>::push_back(in);
+        if (in) b->Print("Summary");
+    }
 
 public:
 
+    struct TestNumErr
+    {
+        double Err;
+        size_t TestOffset;   
+        operator double() const { return Err; }
+    };
+
+    struct TrainEpocStatus
+    {
+        std::chrono::high_resolution_clock::time_point  TrainStart;
+        size_t NumTrainInEpoc;
+        size_t NumTrainDone;
+        size_t NumPasses;
+        size_t NumEpoc;
+        static const size_t PassWinSize = 150;
+        std::bitset<PassWinSize> LastPasses;
+        TrainEpocStatus(size_t numTrains, size_t e) : 
+            TrainStart(std::chrono::high_resolution_clock::now()),
+            NumTrainInEpoc(numTrains), NumTrainDone(0), NumPasses(0), NumEpoc(e) {}
+    };
+
+private:
+    std::vector<TrainEpocStatus*> TrainEpocStatuses;
+public:
+    
+    TrainEpocStatus* GetCurrentTrainStatus() const { 
+        return TrainEpocStatuses.size() ? TrainEpocStatuses.front() : nullptr; 
+    }
+        
     Network(std::string inFile);
 
     template<typename TrainIter>
     inline void Train(TrainIter begin, TrainIter end)
     {
-        NumTrainInEpoc = std::distance(begin, end);
-
-        size_t numTrain = 0;
-        Layer *f = front(), *b = back();
-        for (auto iter = begin; iter != end; ++iter, ++numTrain)
+        TrainEpocStatus* stat;
+        TrainEpocStatuses.push_back(stat = new TrainEpocStatus(std::distance(begin, end), TrainEpocStatuses.size()));
+        
+        auto& pred = back()->GetAct()->ResultCmpPredicate;
+        for (auto iter = begin; iter != end; ++iter, stat->NumTrainDone++)
         {
             iter->GetInput(f->GetInput());
             f->ForwardPass();
 
-            ErrorFunction->Prime(b->GetOutput(), iter->Target, ErrFRes);
+            auto& out = b->GetOutput();
+            ErrorFunction->Prime(out, iter->Target, ErrFRes);
 
+            bool pass = std::equal(out.begin(), out.end(), iter->Target, pred);
+
+            stat->NumPasses += pass;
+            stat->LastPasses[stat->NumTrainDone % stat->PassWinSize] = pass;
             b->BackwardPass(ErrFRes);
-
-#ifdef VALGRIND
-            if (numTrain > 2) break;
-#endif
-            if (numTrain && SmallTestRate && numTrain % SmallTestRate == 0)
-                SmallTest(begin, NumTrainInEpoc);
+            Sanity();
         }
         for (auto& l : *this) l->WeightDecay(DecayRate);
     }
 
-    template<typename TestIter>
-    inline void SmallTest(TestIter begin, size_t numTrainInEpoc)
-    {
-        auto smallTestStart = begin + Utils::URand(numTrainInEpoc - SmallTestSize);
-
-        Logging::Log << "Small test " << SmallTestNum++;
-        Test(smallTestStart, smallTestStart + SmallTestSize);
-        auto res = Results();
-        Logging::Log << "\tAcc:\t" << res.x * 100 << "% Error:\t" << res.y << "\n" << Logging::Log.flush;
-    }
 
     template<typename TestIter>
-    inline double Test(TestIter begin, TestIter end)
+    inline double Test(TestIter begin, TestIter end, Utils::TopN<TestNumErr>* topNFails = nullptr)
     {
+        if (topNFails) topNFails->clear();
         NumValCorrect = 0; NumVal = 0; VldnRMSE = 0;
         auto& pred = back()->GetAct()->ResultCmpPredicate;
         size_t numTest = 0;
-        Layer *f = front(), *b = back();
+
         for (auto iter = begin; iter != end; ++iter, ++numTest)
         {
             iter->GetInput(f->GetInput());
@@ -102,11 +136,10 @@ public:
             auto& out = b->GetOutput();
             NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
             ErrorFunction->Apply(out, iter->Target, ErrFRes);
-            VldnRMSE += std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
-
-#ifdef VALGRIND
-            if (numTest > 2) break;
-#endif
+            double thisRmse = std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
+            VldnRMSE += thisRmse;
+            
+            if (topNFails) topNFails->insert({ thisRmse, numTest });
         }
 
         NumVal = numTest;
@@ -126,14 +159,13 @@ public:
                 << "\nNetowrk Description: "
                 << "\nEtaMultiplier : " << EtaMultiplier
                 << "\nErrorFunction : " << ErrorFunction->Name()
-                << "\nSmallTestRate : " << SmallTestRate
-                << "\nSmallTestSize : " << SmallTestSize
                 << "\nEtaDecayRate  : " << EtaDecayRate
                 << "\nWeightSanityCheck : " << WeightSanityCheck
                 << "\n";
 
         }
-
+        out.flush();
+        if (!size()) return;
         Layer* l = front();
         do { l->Print(printList, out);  } while ((l = l->NextLayer()) != nullptr);
         out << "===================================================\n\n"; out.flush();
@@ -161,12 +193,12 @@ public:
                 prev->Print("Summary");
                 throw std::invalid_argument("This condition is an error"); // wow! what a helpful message
             }
+
             l = prev;
         } while (l != nullptr);
 
         if (counter != numLayers)
             throw std::logic_error("All layers are not linked correctly");
-
     }
 
     inline Vec::Vec2<double> Results() {
@@ -176,16 +208,8 @@ public:
     ~Network() {
         for (auto& l : *this) delete l;
         ErrFRes.Clear();
+        for (auto& s : TrainEpocStatuses) delete s;
     }
-
-
-private:
-
-    size_t NumVal, NumTrainInEpoc;
-    double NumValCorrect, VldnRMSE;
-    double DecayRate;
-    std::string ConfigSource;
-
 };
 
 #endif

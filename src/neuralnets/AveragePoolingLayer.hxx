@@ -134,8 +134,11 @@ public:
                 AveragingKernels::GetOpSize(desc, prev), desc.Activation, prev),
                 Windows(desc.WindowSize, prev->GetOutput().size.z)
     {
-        if ((Input.size.x % Windows.WindowSize.x) || (Input.size.y % Windows.WindowSize.y) )
-            throw std::invalid_argument("Invalid window size in averagin layer: leaves edges out");
+        if ((Input.size.x % Windows.WindowSize.x) || (Input.size.y % Windows.WindowSize.y))
+        {
+            Print("Summary");
+            throw std::invalid_argument("In layer describe above, window size is invalid: leaves edges out");
+        }
     }
 
     virtual void ForwardPass()

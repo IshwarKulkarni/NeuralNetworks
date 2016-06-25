@@ -33,12 +33,22 @@ using namespace CIFAR;
 double VldnFraction = 0.05f;
 double TestFraction = 0.05f;
 
+Vec2<double> SetVldnTestFractions(double vldn, double test)
+{
+    if (vldn + test >= 1.0)
+        throw std::runtime_error("");
+
+    Vec2<double> prev = { VldnFraction, TestFraction };
+    VldnFraction = vldn, TestFraction = test;
+    return prev;
+}
+
 PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
 {
     Logging::Timer timer("MNIST2 data load");
 
     if (N > MNISTReader::NumImages + MNISTReader::NumTestImages)
-        throw std::invalid_argument("MNSIT dataset has only 70000 images, queried for " + to_string(N));
+        N = MNISTReader::NumImages + MNISTReader::NumTestImages;
 
     InputSize = { MNISTReader::ImW, MNISTReader::ImH, 1 };
     TargetPatternDef targetPattern(10, TargetPatternDef::UseUnaryArray, highlo[0], highlo[1]);
@@ -63,11 +73,14 @@ PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& Out
         data[i].Input = testImageLables.first + i - MNISTReader::NumImages,
         data[i].Target = data.GetTarget(testImageLables.second[i - MNISTReader::NumImages]);
 
-    if (testImageLables.second) delete[] testImageLables.second;
+    if (testImageLables.second) 
+        delete[] testImageLables.second;
+    
     delete[] imageLables.second;
 
     data.SetDataToDelete(imageLables.first);
     data.SetDataToDelete(testImageLables.first);
+
     return data;
 }
 

@@ -27,6 +27,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <type_traits>
 
 #include "Vec23.hxx"
+#include "Utils.hxx"
 
 /*
 Simple T** type matrix manipulation;
@@ -330,6 +331,19 @@ namespace SimpleMatrix
             return sum;
         }
 
+        template<bool PConnection, typename U>
+        inline T DotCornerAt(Vec::Vec3<size_t> s, const Matrix3<U>& kernel, bool* connection = nullptr) const
+        {
+            Vec::Vec3<size_t> e = { s.x + kernel.size.x, s.y + kernel.size.y, size.z };
+
+            T sum = 0;
+            for3d2(s, e)
+                if (!PConnection || connection[z]) 
+                sum += at(z, y, x) * kernel.at(z, y - s.y, x - s.x);
+
+            return sum;
+        }
+        
         inline T& at(int z, int y, int x)
         {
 
@@ -396,8 +410,6 @@ namespace SimpleMatrix
         for (size_t i = 0; i < k.size.z; ++i) { out << "\nFrame " << i << " : " << k(i); }
         return out;
     }
-
-
 
     template<typename T>
     inline void OutCSV(std::ostream& out, const Matrix<T>& k, const char* msg)
@@ -520,6 +532,18 @@ namespace SimpleMatrix
         return out;
     }
 
+    template<typename T>
+    inline void WriteRawMatrix(std::ostream& out, const Matrix3<T>& mat)
+    {
+        Utils::WriteRawBytes(out, mat.size);
+        out.write(static_cast<char*>(mat.data[0][0]), mat.size() * sizeof(T));
+    }
+    template <typename T>
+    inline void WriteRawMatrix(std::ostream& out, const Matrix<T>& mat)
+    {
+        Utils::WriteRawBytes(out, mat.size);
+        out.write(static_cast<char*>(mat.data[0]), mat.size() * sizeof(T));
+    }
     template<typename T>
     void  ReshapeUnmanaged(T**& mat, T*& in, unsigned width, unsigned height) // can convert T to T*, NDim to (N+1)Dim arrays;
     {
