@@ -74,14 +74,14 @@ public:
     {
         std::chrono::high_resolution_clock::time_point  TrainStart;
         size_t NumTrainInEpoc;
-        size_t NumTrainDone;
-        size_t NumPasses;
-        size_t NumEpoc;
+        size_t SamplesDone;
+        size_t TotNumPasses;
+        size_t EpochNum;
         static const size_t PassWinSize = 150;
         std::bitset<PassWinSize> LastPasses;
         TrainEpocStatus(size_t numTrains, size_t e) : 
             TrainStart(std::chrono::high_resolution_clock::now()),
-            NumTrainInEpoc(numTrains), NumTrainDone(0), NumPasses(0), NumEpoc(e) {}
+            NumTrainInEpoc(numTrains), SamplesDone(0), TotNumPasses(0), EpochNum(e) {}
     };
 
 private:
@@ -89,7 +89,7 @@ private:
 public:
     
     TrainEpocStatus* GetCurrentTrainStatus() const { 
-        return TrainEpocStatuses.size() ? TrainEpocStatuses.front() : nullptr; 
+        return TrainEpocStatuses.size() ? TrainEpocStatuses.back() : nullptr; 
     }
         
     Network(std::string inFile);
@@ -101,7 +101,7 @@ public:
         TrainEpocStatuses.push_back(stat = new TrainEpocStatus(std::distance(begin, end), TrainEpocStatuses.size()));
         
         auto& pred = back()->GetAct()->ResultCmpPredicate;
-        for (auto iter = begin; iter != end; ++iter, stat->NumTrainDone++)
+        for (auto iter = begin; iter != end; ++iter, stat->SamplesDone++)
         {
             iter->GetInput(f->GetInput());
             f->ForwardPass();
@@ -111,8 +111,8 @@ public:
 
             bool pass = std::equal(out.begin(), out.end(), iter->Target, pred);
 
-            stat->NumPasses += pass;
-            stat->LastPasses[stat->NumTrainDone % stat->PassWinSize] = pass;
+            stat->TotNumPasses += pass;
+            stat->LastPasses[stat->SamplesDone % stat->PassWinSize] = pass;
             b->BackwardPass(ErrFRes);
             Sanity();
         }
