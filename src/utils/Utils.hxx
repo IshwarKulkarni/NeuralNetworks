@@ -362,7 +362,7 @@ namespace Logging
                 End = std::chrono::high_resolution_clock::now();
                 Span = std::chrono::duration_cast<std::chrono::duration<double>>(End - Start);
                 if (LogAtStop && TimerName.length())
-                    Log << "\"" << TimerName << "\"" << " Ended at " << TimeNowStringFull() << ". Duration was " << Span.count() << " seconds.\n";
+                    Log << "\n\"" << TimerName << "\"" << " Ended at " << TimeNowStringFull() << ". Duration was " << Span.count() << " seconds.\n";
             }
         }
 

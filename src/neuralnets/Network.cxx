@@ -80,14 +80,14 @@ Network::Network(std::string configFile) :
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndFullyConnectedLayerGroup");
 
-            size_t inSize = b ? b->GetInput().size() : 0;
-            nvpp.Get("InputSize", inSize);
+            Vec::Size3 inSize = b ? b->GetInput().size : Vec::Size3(0, 1, 1);
+            nvpp.Get("InputSize", inSize.x);
             if (!inSize) throw std::runtime_error("Input size cannot be zero on first input");
 
             auto nameVals = nvpp.GetPairs<size_t>();
             for (size_t i = 0; i < nameVals.size(); ++i)
             {
-                inSize = b ? b->GetOutput().size() : inSize; 
+                inSize = b ? b->GetOutput().size : inSize; 
 
                 if (StringUtils::beginsWith(nameVals[i].first, "InputSize")) continue;
 
@@ -98,7 +98,7 @@ Network::Network(std::string configFile) :
                 else if (names.size() < 2)
                     throw std::runtime_error("Need to have a <LayerName, Activation> in line: "  + nameVals[i].first);
                 else
-                    push_back(new FullyConnectedLayer(names[0], inSize, nameVals[i].second, StringUtils::StrTrim(names[1]), b));
+                    push_back(new FullyConnectedLayer(names[0], inSize(), nameVals[i].second, StringUtils::StrTrim(names[1]), b));
             }
         }
         else if (StringUtils::beginsWith(line, "->ConvLayer"))

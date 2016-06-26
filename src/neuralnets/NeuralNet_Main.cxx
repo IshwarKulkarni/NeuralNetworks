@@ -38,7 +38,7 @@ struct NeuralNetRunParams_t
 
     NeuralNetRunParams_t() :
         DataLoc(DATA_LOCATION), ConfigFile("MNIST_LeNet-5.config"),
-        VldnFrac(0.05), TestFrac(0.05),NumSamples(-1),   MaxEpocs(2), TargetAcc(98),
+        VldnFrac(0.05), TestFrac(0.05), NumSamples(-1), MaxEpocs(2), TargetAcc(98),
         RunTest(1), TopNFailIms(10)
     {
         GLOBAL_OF_TYPE_WNAME(NumSamples);
@@ -53,18 +53,15 @@ struct NeuralNetRunParams_t
     }
 };
 
-void statusMonitor(const Network* nn, bool& monitor, atomic<size_t>& epoch)
+void statusMonitor(const Network* nn, bool& monitor)
 {
-    //static const string wheel("-\\|/-\\|/");
     size_t checkNum = 0;
-    static const string wheel = { char(176), char(177), char(178), char(219) , char(178),char(177)};
+    static const string wheel = { char(176), char(177), char(178), char(219) , char(178),char(177) };
     while (monitor)
     {
         auto stat = nn->GetCurrentTrainStatus();
 
-        if (!(stat && stat->SamplesDone && epoch == stat->EpochNum)){
-            std::this_thread::yield(); continue; 
-        }
+        if (!(stat && stat->SamplesDone)) { std::this_thread::yield(); continue; }
 
         auto nextCheck = system_clock::now() + milliseconds(250);
 
@@ -73,16 +70,17 @@ void statusMonitor(const Network* nn, bool& monitor, atomic<size_t>& epoch)
             cumPassRate = double(stat->TotNumPasses) / double(stat->SamplesDone),
             imRate = double(stat->SamplesDone) / Utils::TimeSince(stat->TrainStart);
 
-        cout 
-            << setw(4) << setprecision(4) 
-            << "\rEpoch " << epoch << "> "
-            << wheel[(checkNum++) % wheel.length()] 
-            << " Complete : " << done 
-            << "%\tPass<" << stat->PassWinSize << ">: "  << passRate
-            << "%\tTotal Pass: "  << cumPassRate*100 
+        cout
+            << setw(4) << setprecision(4)
+            << "\rEpoch " << stat->EpochNum << "> "
+            << wheel[(checkNum++) % wheel.length()]
+            << " Complete : " << done
+            << "%\tPass<" << stat->PassWinSize << ">: " << passRate
+            << "%\tTotal Pass: " << cumPassRate * 100
             << "%\tRate : " << imRate << " smpls/s.         ";
 
-        //Log << Utils::TimeSince(stat->TrainStart) << '\t' <<  done << '\t' << passRate << '\t' << cumPassRate << '\n';
+        //Log   << Utils::TimeSince(stat->TrainStart) << '\t' <<  done
+        //      << '\t' << passRate << '\t' << cumPassRate << '\n';
 
         std::this_thread::sleep_until(nextCheck);
     }
@@ -92,44 +90,41 @@ void statusMonitor(const Network* nn, bool& monitor, atomic<size_t>& epoch)
 int main(int argc, char** argv)
 {
     NameValuePairParser::MakeGlobalNVPP(argc, argv);
+
     NeuralNetRunParams_t rParam;
 
     cout << "\nBuilding network & data... ";
     Network nn(rParam.DataLoc + rParam.ConfigFile);
-    
-    SetVldnTestFractions(rParam.VldnFrac, rParam.TestFrac);    
+
+    SetVldnTestFractions(rParam.VldnFrac, rParam.TestFrac);
     Vec::Size3 in; unsigned out;
-    auto data = LoadMnistData2(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
+
+    auto data = LoadCifarData10(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
     data.Summarize(Log, false);
 
     cout << "\nTraining... " << endl;
     Timer  epochTime("ClassifierTime");
-    
-    auto monitor = true;
-    atomic<size_t> epoch = { 0 };
-    std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor), std::ref(epoch));
 
-    while (epoch < rParam.MaxEpocs)
+    auto monitor = true;
+    std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
+
+    for (size_t epoch = 0; epoch < rParam.MaxEpocs; ++epoch)
     {
         epochTime.TimeFromLastCheck();
         nn.Train(data.TrainBegin(), data.TrainEnd());
         double lastCheck = epochTime.TimeFromLastCheck();
 
-        ++epoch;
-
         nn.Test(data.VldnBegin(), data.VldnEnd());
-        
-        cout << "\rEpoch "  << epoch -1 << "> ["
-            << lastCheck << "s]:\t(Accuracy, RMSE): "  << nn.Results() 
-            << "                     \n" ;
 
-        if (nn.Results().first * 100 > rParam.TargetAcc )  break;
+        cout << "\rEpoch " << epoch - 1 << "> [" << lastCheck << "s]" 
+            << ":\t(Accuracy, RMSE): " << nn.Results() << "\n";
+
+        if (nn.Results().first * 100 > rParam.TargetAcc)  break;
 
         data.ShuffleTrnVldn();
     }
-
-
-    monitor = false;  
+    
+    monitor = false;
     statMonitorThread.join();
 
     if (rParam.RunTest)
@@ -140,8 +135,8 @@ int main(int argc, char** argv)
 
         cout << "\nRunning test.. ";
         nn.Test(data.TestBegin(), data.TestEnd(), topNFails);
-        
-        Log  << "Test (Accuracy, RMSE): " << nn.Results() << '\n';
+
+        Log << "Test (Accuracy, RMSE): " << nn.Results() << '\n';
         cout << "Test (Accuracy, RMSE): " << nn.Results() << '\n';
 
         if (topNFails)
@@ -150,12 +145,12 @@ int main(int argc, char** argv)
             cout << "\nWriting top " << topNFails->size() << " fails as images.. ";
             for (auto& f : *topNFails)
                 PPMIO::Write("Fail_" + to_string(i++), MNISTReader::ImW, MNISTReader::ImH, 1,
-                (data.TestBegin() + f.TestOffset)->Input[0][0]);
+                    (data.TestBegin() + f.TestOffset)->Input[0][0]);
 
             cout << "Done\n";
         }
     }
-    
+
     data.Clear();
     cin.get();
     return 0;

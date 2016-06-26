@@ -139,10 +139,10 @@ public:
         bool all = printList.find("all") != std::string::npos, printed = false;
         if (all || printList.find("Summary") != std::string::npos)
         {
-            out << "\n--> Summary for " << Name << "\t| " << Act->Name << "\t| Eta: " << Eta
-                << ",\tInputs : " << (Neurons.size() ? Neurons[0].NumWeights() : 0)
-                << ",\tOutputs: " << Neurons.size()
-                << ",\tEta    : " << Eta << "\n";
+            out << "\n--> Summary for " << Name << "\t| " << Act->Name
+                << "\nInputs : " << (Neurons.size() ? Neurons[0].NumWeights() : 0)
+                << "\nOutputs: " << Neurons.size()
+                << "\nEta    : " << Eta << "\n";
             printed = true;
         }
         if (all || printList.find("Neurons") != std::string::npos)

@@ -29,10 +29,10 @@ class DropConnectLayer : public Layer
 public:
     DropConnectLayer(std::string name, Vec::Size3 size, double dropRate, const Network* nn, Layer* prev) :
         Layer("DropConnect-" + name, 
-            size() ?size : prev->GetOutput().size,
-            size() ?size : prev->GetOutput().size,  
+            size() ? size : prev->GetOutput().size,
+            size() ? size : prev->GetOutput().size,  
             "Sigmoid", prev),
-        DropRate(dropRate), Scale(1 / (1 - dropRate)), Mask(Input.size()), NN(nn)
+        DropRate(dropRate), Scale(1 / (1 - dropRate)), Mask(Input.size), NN(nn)
     {
         LGrads.Clear(); Grads.Clear(); PGrads.Clear();
         if (dropRate > 1)  throw std::runtime_error("Drop rate is invalid: " + std::to_string(dropRate));
@@ -41,7 +41,7 @@ public:
     virtual inline void ForwardPass()
     {
        if (NN->GetCurretnStatus() == NetworkStatus::Training) 
-            for (size_t i = 0; i < Mask.size();++i)
+            for (size_t i = 0; i < Mask.size(); ++i)
                 Output[i] = ((Mask[i] = (Utils::URand(1.0) < DropRate)) * Scale) * Input[i];
        else
            for (size_t i = 0; i < Mask.size(); ++i)
@@ -73,11 +73,13 @@ public:
 
         out.flush();
     }
-    virtual ~DropConnectLayer() {}
+    virtual ~DropConnectLayer() {
+        Mask.Clear();
+    }
 private:
 
     const double DropRate, Scale;
-    std::vector<bool> Mask;
+    SimpleMatrix::Matrix3<bool> Mask;
     const Network* NN;
 };
 
