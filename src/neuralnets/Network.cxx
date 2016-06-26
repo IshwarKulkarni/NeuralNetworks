@@ -18,12 +18,14 @@ FITNESS FOR A PARTICULAR PURPOSE.
 */
 
 #include "FullyConnectedLayer.hxx"
+#include "ConvolutionLayer.hxx"
 #include "AveragePoolingLayer.hxx"
 #include "MaxPoolingLayer.hxx"
-#include "utils/CommandLine.hxx"
-#include "ConvolutionLayer.hxx"
+#include "DropConnectLayer.hxx"
 #include "Network.hxx"
 
+#include "utils/CommandLine.hxx"
+#include <deque>
 
 using namespace std;
 
@@ -33,7 +35,8 @@ Network::Network(std::string configFile) :
     WeightSanityCheck(false),
     ErrorFunction(GetErrofFunctionByName("MeanSquareError")),
     f(nullptr), 
-    b(nullptr)
+    b(nullptr),
+    CurrentStatus(Building)
 {
     std::ifstream inFile(configFile.c_str(), ios::in | ios::binary);
     if (!inFile.good())
@@ -71,6 +74,33 @@ Network::Network(std::string configFile) :
             Print("Network");
 
         }
+        else if (StringUtils::beginsWith(line, "->FullyConnectedLayerGroup"))
+        {
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndFullyConnectedLayerGroup");
+            if (!nvpp.IsLastLineRead())
+                throw std::runtime_error("End of file found matching ->EndFullyConnectedLayerGroup");
+
+            size_t inSize = b ? b->GetInput().size() : 0;
+            nvpp.Get("InputSize", inSize);
+            if (!inSize) throw std::runtime_error("Input size cannot be zero on first input");
+
+            auto nameVals = nvpp.GetPairs<size_t>();
+            for (size_t i = 0; i < nameVals.size(); ++i)
+            {
+                inSize = b ? b->GetOutput().size() : inSize; 
+
+                if (StringUtils::beginsWith(nameVals[i].first, "InputSize")) continue;
+
+                const auto& names = StringUtils::Split(nameVals[i].first, ",:", true);
+
+                if (StringUtils::beginsWith(nameVals[i].first, "DropConnect"))
+                    push_back(new DropConnectLayer(names[0], inSize, nvpp.Get<double>(nameVals[i].first)/100, this, b));
+                else if (names.size() < 2)
+                    throw std::runtime_error("Need to have a <LayerName, Activation> in line: "  + nameVals[i].first);
+                else
+                    push_back(new FullyConnectedLayer(names[0], inSize, nameVals[i].second, StringUtils::StrTrim(names[1]), b));
+            }
+        }
         else if (StringUtils::beginsWith(line, "->ConvLayer"))
         {
             ConvLayerDesc desc; desc.KernelStride = { 1, 1 };
@@ -78,12 +108,12 @@ Network::Network(std::string configFile) :
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndConvLayer");
 
-            nvpp.Get("Name", desc.Name);
-            nvpp.Get("IpSize", desc.IpSize);
-            nvpp.Get("Activation", desc.Activation);
-            nvpp.Get("NumKernels", desc.NumberOfKernels);
-            nvpp.Get("KernelSize", desc.KernelSize);
-            nvpp.Get("KernelStride", desc.KernelStride);
+            nvpp.Get("Name",        desc.Name);
+            nvpp.Get("IpSize",      desc.IpSize);
+            nvpp.Get("Activation",  desc.Activation);
+            nvpp.Get("NumKernels",  desc.NumberOfKernels);
+            nvpp.Get("KernelSize",  desc.KernelSize);
+            nvpp.Get("KernelStride",desc.KernelStride);
             nvpp.Get("Padded",      desc.PaddedConvolution);
             
             if (desc.NumberOfKernels == 0)
@@ -160,39 +190,33 @@ Network::Network(std::string configFile) :
                 throw std::runtime_error("End of file found matching ->EndMaxPoolingLayer");
 
             MaxPoolingLayerDesc desc;
-            nvpp.Get("Name", desc.Name);
-            nvpp.Get("Activation", desc.Activation);
-            nvpp.Get("WindowSize", desc.WindowSize);
+            nvpp.Get("Name",        desc.Name);
+            nvpp.Get("Activation",  desc.Activation);
+            nvpp.Get("WindowSize",  desc.WindowSize);
 
             if (desc.Name.length() && GetActivationByName(desc.Activation))
                 push_back(new MaxPoolingLayer(desc, b));
             else
                 throw std::invalid_argument("Average pooling layer descriptor is ill formed");
-
         }
-        else if (StringUtils::beginsWith(line, "->FullyConnectedLayerGroup"))
+        else if (StringUtils::beginsWith(line, "->DropConnectLayer"))
         {
-            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndFullyConnectedLayerGroup");
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndDropConnect");
             if (!nvpp.IsLastLineRead())
-                throw std::runtime_error("End of file found matching ->EndFullyConnectedLayers");
+                throw std::runtime_error("End of file found matching ->EndMaxPoolingLayer");
 
-            const auto& nameSizes = nvpp.GetPairs<unsigned>();
+            double dropRate = 50; string name = "DropConn"; 
+            Vec::Size3 inSz = b ? b->GetOutput().size : Vec::Size3(0, 0, 0);
+            nvpp.Get("DropRate",    dropRate);
+            nvpp.Get("Name",        name);
+            nvpp.Get("InputSize",   inSz);
+            dropRate /= 100;
 
-            for (unsigned i = 0; i < nameSizes.size() - 1; ++i)
-            {
-                const auto& splits = StringUtils::Split(nameSizes[i + 1].first, ",", true);
+            push_back(new DropConnectLayer(name, inSz, dropRate, this, b));
 
-                const std::string& actName = StringUtils::StrTrim(splits.size() >1 ? splits[1] : "Sigmoid");
-                const std::string& layerName = splits[0];
-
-                unsigned  inSize = nameSizes[i].second, outSize = nameSizes[i + 1].second;
-
-                if (!inSize) inSize = b->GetOutput().size();
-
-                push_back(new FullyConnectedLayer(layerName, inSize, outSize, actName, b));
-            }
         }
-
+        else if (StringUtils::beginsWith(line, "->"))
+            throw std::runtime_error("Unknown layer description at: " + line);
     }
 
     if (size())
@@ -204,6 +228,8 @@ Network::Network(std::string configFile) :
         throw std::invalid_argument("File could not be read!");
 
     Sanity();
+
+    CurrentStatus = None;
 
     //Print("Network & Summary");
 }

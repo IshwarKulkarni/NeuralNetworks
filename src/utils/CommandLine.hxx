@@ -160,10 +160,10 @@ public:
     }
 
     template<typename ValType> // trivially constructible  ValType
-    ValType Get(const std::string& name, bool caseSensitive = true) const
+    ValType Get(const std::string& name) const
     {
         ValType v; 
-        Get(name, v, caseSensitive);
+        Get(name, v);
         return v;
     }
 

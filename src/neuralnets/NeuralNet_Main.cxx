@@ -55,8 +55,9 @@ struct NeuralNetRunParams_t
 
 void statusMonitor(const Network* nn, bool& monitor, atomic<size_t>& epoch)
 {
-    string wheel("-\\|/-\\|/"); size_t checkNum = 0;
-    
+    //static const string wheel("-\\|/-\\|/");
+    size_t checkNum = 0;
+    static const string wheel = { char(176), char(177), char(178), char(219) , char(178),char(177)};
     while (monitor)
     {
         auto stat = nn->GetCurrentTrainStatus();
@@ -65,7 +66,7 @@ void statusMonitor(const Network* nn, bool& monitor, atomic<size_t>& epoch)
             std::this_thread::yield(); continue; 
         }
 
-        auto nextCheck = system_clock::now() + milliseconds(500);
+        auto nextCheck = system_clock::now() + milliseconds(250);
 
         auto done = (100. * stat->SamplesDone) / stat->NumTrainInEpoc,
             passRate = (100. * stat->LastPasses.count()) / stat->PassWinSize,
@@ -75,10 +76,11 @@ void statusMonitor(const Network* nn, bool& monitor, atomic<size_t>& epoch)
         cout 
             << setw(4) << setprecision(4) 
             << "\rEpoch " << epoch << "> "
-            << wheel[(checkNum++) % wheel.length()]  << " "
-            << "Complete : " << done <<  "% "
-            << "\tPass<" << stat->PassWinSize << ">: "  << passRate << "% "
-            << "\tRate : " << imRate << " smpls/s.         ";
+            << wheel[(checkNum++) % wheel.length()] 
+            << " Complete : " << done 
+            << "%\tPass<" << stat->PassWinSize << ">: "  << passRate
+            << "%\tTotal Pass: "  << cumPassRate*100 
+            << "%\tRate : " << imRate << " smpls/s.         ";
 
         //Log << Utils::TimeSince(stat->TrainStart) << '\t' <<  done << '\t' << passRate << '\t' << cumPassRate << '\n';
 
@@ -107,7 +109,6 @@ int main(int argc, char** argv)
     atomic<size_t> epoch = { 0 };
     std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor), std::ref(epoch));
 
-    
     while (epoch < rParam.MaxEpocs)
     {
         epochTime.TimeFromLastCheck();
@@ -146,7 +147,7 @@ int main(int argc, char** argv)
         if (topNFails)
         {
             size_t i = 0;
-            cout << "\nWriting top " << topNFails->size() << " fails as images\n";
+            cout << "\nWriting top " << topNFails->size() << " fails as images.. ";
             for (auto& f : *topNFails)
                 PPMIO::Write("Fail_" + to_string(i++), MNISTReader::ImW, MNISTReader::ImH, 1,
                 (data.TestBegin() + f.TestOffset)->Input[0][0]);

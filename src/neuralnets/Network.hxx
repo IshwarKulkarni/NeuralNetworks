@@ -31,8 +31,18 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "data/DataSets.hxx"
 #include "ErrorFunctions.hxx"
 
+
 typedef SimpleMatrix::Matrix3<double> Volume;
 typedef SimpleMatrix::Matrix<double> Frame;
+
+enum NetworkStatus
+{
+    Building,
+    Training,
+    Testing,
+    None
+};
+
 
 // Network holds pointers to a nodes in a doubly linked list of layers.
 class Network : public std::vector<Layer*> // yeah, thou shalt not inherit from STL containers! Sue me!
@@ -60,7 +70,7 @@ class Network : public std::vector<Layer*> // yeah, thou shalt not inherit from 
         if (in) b->Print("Summary");
     }
 
-public:
+public: // exposed types :
 
     struct TestNumErr
     {
@@ -76,7 +86,7 @@ public:
         size_t SamplesDone;
         size_t TotNumPasses;
         size_t EpochNum;
-        static const size_t PassWinSize = 150;
+        static const size_t PassWinSize = 100;
         std::bitset<PassWinSize> LastPasses;
         TrainEpocStatus(size_t numTrains, size_t e) : 
             TrainStart(std::chrono::high_resolution_clock::now()),
@@ -84,11 +94,17 @@ public:
     };
 
 private:
+    
     std::vector<TrainEpocStatus*> TrainEpocStatuses;
-public:
+
+    NetworkStatus CurrentStatus;
+
+public: 
+
+    NetworkStatus GetCurretnStatus() const { return CurrentStatus; }
     
     TrainEpocStatus* GetCurrentTrainStatus() const { 
-        return TrainEpocStatuses.size() ? TrainEpocStatuses.back() : nullptr; 
+        return (TrainEpocStatuses.size() && (CurrentStatus == Training)) ? TrainEpocStatuses.back() : nullptr;
     }
         
     Network(std::string inFile);
@@ -96,6 +112,7 @@ public:
     template<typename TrainIter>
     inline void Train(TrainIter begin, TrainIter end)
     {
+        CurrentStatus = Training;
         TrainEpocStatus* stat;
         TrainEpocStatuses.push_back(stat = new TrainEpocStatus(std::distance(begin, end), TrainEpocStatuses.size()));
         
@@ -116,12 +133,16 @@ public:
             Sanity();
         }
         for (auto& l : *this) l->WeightDecay(EtaDecayRate);
+
+        CurrentStatus = None;
     }
 
 
     template<typename TestIter>
     inline double Test(TestIter begin, TestIter end, Utils::TopN<TestNumErr>* topNFails = nullptr)
     {
+        CurrentStatus = Testing;
+
         if (topNFails) topNFails->clear();
         NumValCorrect = 0; NumVal = 0; VldnRMSE = 0;
         auto& pred = back()->GetAct()->ResultCmpPredicate;
@@ -142,8 +163,11 @@ public:
         }
 
         NumVal = numTest;
+        
+        CurrentStatus = None;
 
         return NumValCorrect / NumVal;
+        
     }
 
     inline const Vec::Vec2<double>& GetOutputHiLo() const { return back()->GetAct()->MinMax; }
