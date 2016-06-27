@@ -22,6 +22,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "AveragePoolingLayer.hxx"
 #include "MaxPoolingLayer.hxx"
 #include "DropConnectLayer.hxx"
+#include "AttenuationLayer.hxx"
 #include "Network.hxx"
 
 #include "utils/CommandLine.hxx"
@@ -49,14 +50,12 @@ Network::Network(std::string configFile) :
     SimpleMatrix::Matrix<bool> ConnectionTable (Vec::Size2( 0, 0 ),nullptr); // just a name;
     while (inFile && std::getline(inFile,line))
     {
-
         StringUtils::StrTrim(line);
         if (line.length() == 0 || line[0] == '#')
             continue;
 
         if (StringUtils::beginsWith(line, "->NetworkDescription"))
         {
-
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndNetworkDescription");
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndNetworkDescription");
@@ -66,13 +65,12 @@ Network::Network(std::string configFile) :
             NVPP_GET_TYPE_WNAME(nvpp, EtaDecayRate);
             NVPP_GET_TYPE_WNAME(nvpp, WeightSanityCheck);
 
-            std::string errfName = "MeanSquareError";
-            NVPP_GET_TYPE_WNAME(nvpp,errfName);
-            if ((ErrorFunction = GetErrofFunctionByName(errfName)) == nullptr)
-                throw std::invalid_argument("Cannot find Error function by name: " + errfName);
+            std::string ErrFName = "MeanSquareError";
+            NVPP_GET_TYPE_WNAME(nvpp, ErrFName);
+            if ((ErrorFunction = GetErrofFunctionByName(ErrFName)) == nullptr)
+                throw std::invalid_argument("Cannot find Error function by name: " + ErrFName);
 
             Print("Network");
-
         }
         else if (StringUtils::beginsWith(line, "->FullyConnectedLayerGroup"))
         {
@@ -203,7 +201,7 @@ Network::Network(std::string configFile) :
         {
             NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndDropConnect");
             if (!nvpp.IsLastLineRead())
-                throw std::runtime_error("End of file found matching ->EndMaxPoolingLayer");
+                throw std::runtime_error("End of file found matching ->EndDropConnect");
 
             double dropRate = 50; string name = "DropConn"; 
             Vec::Size3 inSz = b ? b->GetOutput().size : Vec::Size3(0, 0, 0);
@@ -215,6 +213,24 @@ Network::Network(std::string configFile) :
             push_back(new DropConnectLayer(name, inSz, dropRate, this, b));
 
         }
+        else if (StringUtils::beginsWith(line, "->AttenuationLayer"))
+        {
+            NameValuePairParser nvpp(inFile, ":", '\0', "#", "->EndAttenuationLayer");
+            if (!nvpp.IsLastLineRead())
+                throw std::runtime_error("End of file found matching ->EndAttenuationLayer");
+
+            string name = "Attenuation";
+            Vec::Size3 inSz = b ? b->GetOutput().size : Vec::Size3(0, 0, 0);
+            
+            double mean = 0.0, SD = .5;
+            nvpp.Get("Name", name);
+            nvpp.Get("InputSize", inSz);
+            nvpp.Get("Mean", mean);
+            nvpp.Get("SD", SD);
+            push_back(new AttenuationLayer(name, inSz, mean, SD, this, b));
+
+        }
+
         else if (StringUtils::beginsWith(line, "->"))
             throw std::runtime_error("Unknown layer description at: " + line);
     }

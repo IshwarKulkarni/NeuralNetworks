@@ -64,8 +64,8 @@ struct Kernel : public Volume
 {
     const Vec::Size2 Stride;  // when stride is 1, max overlap; i.e. windows moves 1pixel 
     double Bias;
-    bool Padded;
-
+    const bool Padded;
+    
     inline Kernel(const ConvLayerDesc& desc, size_t ipSizeZ) :
         Volume(Vec::Size3(desc.KernelSize.x | 1, desc.KernelSize.y | 1, ipSizeZ)), // odd sizes only
         Stride(desc.KernelStride),

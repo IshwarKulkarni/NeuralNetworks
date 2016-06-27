@@ -38,7 +38,7 @@ struct NeuralNetRunParams_t
 
     NeuralNetRunParams_t() :
         DataLoc(DATA_LOCATION), ConfigFile("test1.config"),
-        VldnFrac(0.05), TestFrac(0.05), NumSamples(-1), MaxEpocs(2), TargetAcc(98),
+        VldnFrac(0.05), TestFrac(0.05), NumSamples(-1), MaxEpocs(4), TargetAcc(98),
         RunTest(1), TopNFailIms(10)
     {
         GLOBAL_OF_TYPE_WNAME(NumSamples);
@@ -79,8 +79,8 @@ void statusMonitor(const Network* nn, bool& monitor)
             << "%\tTotal Pass: " << cumPassRate * 100
             << "%\tRate : " << imRate << " smpls/s.         ";
 
-        Log << stat->EpochNum << Utils::TimeSince(stat->TrainStart) 
-            << '\t' <<  done << '\t' << passRate << '\t' << cumPassRate << '\n';
+        //Log << stat->EpochNum << Utils::TimeSince(stat->TrainStart) 
+        //    << '\t' <<  done << '\t' << passRate << '\t' << cumPassRate << '\n';
 
         std::this_thread::sleep_until(nextCheck);
     }
@@ -108,6 +108,8 @@ int main(int argc, char** argv)
     auto monitor = true;
     std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
 
+    data.ShuffleTrnVldn();
+
     for (size_t epoch = 0; epoch < rParam.MaxEpocs; ++epoch)
     {
         epochTime.TimeFromLastCheck();
@@ -117,14 +119,12 @@ int main(int argc, char** argv)
         nn.Test(data.VldnBegin(), data.VldnEnd());
 
         cout << "\rEpoch " << epoch << "> [" << lastCheck << "s]" 
-            << ":\t(Accuracy, RMSE): " << nn.Results() << "\n";
+            << ":\t(Accuracy, RMSE): " << nn.Results() << string(80, ' ') << "\n";
 
         Log << "\rEpoch " << epoch << "> [" << lastCheck << "s]"
             << ":\t(Accuracy, RMSE): " << nn.Results() << "\n";
 
         if (nn.Results().first * 100 > rParam.TargetAcc)  break;
-
-        data.ShuffleTrnVldn();
     }
     
     monitor = false;
@@ -139,8 +139,8 @@ int main(int argc, char** argv)
         cout << "\nRunning test.. ";
         nn.Test(data.TestBegin(), data.TestEnd(), topNFails);
 
-        Log << "Test (Accuracy, RMSE): " << nn.Results() << '\n';
-        cout << "Test (Accuracy, RMSE): " << nn.Results() << '\n';
+        Log <<  "\nTest (Accuracy, RMSE): " << nn.Results() << '\n';
+        cout << "\nTest (Accuracy, RMSE): " << nn.Results() << string(80, ' ') << '\n';
 
         if (topNFails)
         {

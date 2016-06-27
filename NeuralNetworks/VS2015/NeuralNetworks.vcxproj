@@ -156,6 +156,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\data\CIFAR-ImageReader.hxx" />
     <ClInclude Include="..\..\src\neuralnets\Activation.hxx" />
+    <ClInclude Include="..\..\src\neuralnets\AttenuationLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\AveragePoolingLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\ConvolutionLayer.hxx" />
     <ClInclude Include="..\..\src\neuralnets\DropConnectLayer.hxx" />

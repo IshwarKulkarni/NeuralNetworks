@@ -67,7 +67,6 @@ public:
     {
         for (size_t i = 0; i < out.size(); ++i)
             res[i] = -target[i] * std::log(out[i]) - (1. - target[i]) * std::log(1. - out[i]);
-            
     }
 };
 
