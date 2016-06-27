@@ -37,7 +37,7 @@ struct NeuralNetRunParams_t
     unsigned NumSamples, MaxEpocs, TargetAcc, RunTest, TopNFailIms;
 
     NeuralNetRunParams_t() :
-        DataLoc(DATA_LOCATION), ConfigFile("MNIST_LeNet-5.config"),
+        DataLoc(DATA_LOCATION), ConfigFile("test1.config"),
         VldnFrac(0.05), TestFrac(0.05), NumSamples(-1), MaxEpocs(2), TargetAcc(98),
         RunTest(1), TopNFailIms(10)
     {
@@ -63,7 +63,7 @@ void statusMonitor(const Network* nn, bool& monitor)
 
         if (!(stat && stat->SamplesDone)) { std::this_thread::yield(); continue; }
 
-        auto nextCheck = system_clock::now() + milliseconds(250);
+        auto nextCheck = system_clock::now() + milliseconds(400);
 
         auto done = (100. * stat->SamplesDone) / stat->NumTrainInEpoc,
             passRate = (100. * stat->LastPasses.count()) / stat->PassWinSize,
@@ -79,8 +79,8 @@ void statusMonitor(const Network* nn, bool& monitor)
             << "%\tTotal Pass: " << cumPassRate * 100
             << "%\tRate : " << imRate << " smpls/s.         ";
 
-        //Log   << Utils::TimeSince(stat->TrainStart) << '\t' <<  done
-        //      << '\t' << passRate << '\t' << cumPassRate << '\n';
+        Log << stat->EpochNum << Utils::TimeSince(stat->TrainStart) 
+            << '\t' <<  done << '\t' << passRate << '\t' << cumPassRate << '\n';
 
         std::this_thread::sleep_until(nextCheck);
     }
@@ -99,7 +99,7 @@ int main(int argc, char** argv)
     SetVldnTestFractions(rParam.VldnFrac, rParam.TestFrac);
     Vec::Size3 in; unsigned out;
 
-    auto data = LoadCifarData10(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
+    auto data = LoadMnistData2(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
     data.Summarize(Log, false);
 
     cout << "\nTraining... " << endl;
@@ -116,7 +116,10 @@ int main(int argc, char** argv)
 
         nn.Test(data.VldnBegin(), data.VldnEnd());
 
-        cout << "\rEpoch " << epoch - 1 << "> [" << lastCheck << "s]" 
+        cout << "\rEpoch " << epoch << "> [" << lastCheck << "s]" 
+            << ":\t(Accuracy, RMSE): " << nn.Results() << "\n";
+
+        Log << "\rEpoch " << epoch << "> [" << lastCheck << "s]"
             << ":\t(Accuracy, RMSE): " << nn.Results() << "\n";
 
         if (nn.Results().first * 100 > rParam.TargetAcc)  break;

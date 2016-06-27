@@ -88,6 +88,8 @@ PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& InputSize, unsigned& Ou
 {
     Logging::Timer timer("CIFAR10 data load");
 
+    N = std::min(N, CIFAR::NumImages); 
+
     InputSize = {CIFAR::ImW, CIFAR::ImH, CIFAR::ImD};
 
     TargetPatternDef targetPattern(10, TargetPatternDef::UseUnaryArray, highlo[0], highlo[1]);

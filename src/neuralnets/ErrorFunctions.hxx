@@ -52,6 +52,7 @@ struct MeanSquareErrorType : public ErrorFunctionType
     }
 };
 
+// TODO : fix this!
 struct CrossEntropyType  : ErrorFunctionType{
 public:
     virtual std::string Name() const override { return "CrossEntropyError"; };

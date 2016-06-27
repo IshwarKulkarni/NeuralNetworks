@@ -167,6 +167,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\data\MNIST_LeNet-5.config" />
+    <None Include="..\..\data\test1.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
