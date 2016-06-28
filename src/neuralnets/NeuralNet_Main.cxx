@@ -68,12 +68,13 @@ void statusMonitor(const Network* nn, bool& monitor)
         auto done = (100. * stat->SamplesDone) / stat->NumTrainInEpoc,
             passRate = (100. * stat->LastPasses.count()) / stat->PassWinSize,
             cumPassRate = double(stat->TotNumPasses) / double(stat->SamplesDone),
-            imRate = double(stat->SamplesDone) / Utils::TimeSince(stat->TrainStart);
+            timeSpent = Utils::TimeSince(stat->TrainStart),
+            imRate = double(stat->SamplesDone) / timeSpent;
 
         cout
             << setw(4) << setprecision(4)
-            << "\rEpoch " << stat->EpochNum << "> "
-            << wheel[(checkNum++) % wheel.length()]
+            << "\rEpoch " << stat->EpochNum << "> [" << timeSpent << "s]"
+            //<< wheel[(checkNum++) % wheel.length()]
             << " Complete : " << done
             << "%\tPass<" << stat->PassWinSize << ">: " << passRate
             << "%\tTotal Pass: " << cumPassRate * 100
@@ -99,7 +100,7 @@ int main(int argc, char** argv)
     SetVldnTestFractions(rParam.VldnFrac, rParam.TestFrac);
     Vec::Size3 in; unsigned out;
 
-    auto data = LoadMnistData2(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
+    auto data = LoadCifarData10(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
     data.Summarize(Log, false);
 
     cout << "\nTraining... " << endl;
@@ -107,8 +108,6 @@ int main(int argc, char** argv)
 
     auto monitor = true;
     std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
-
-    data.ShuffleTrnVldn();
 
     for (size_t epoch = 0; epoch < rParam.MaxEpocs; ++epoch)
     {

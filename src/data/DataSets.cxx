@@ -80,6 +80,9 @@ PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& Out
 
     data.SetDataToDelete(imageLables.first);
     data.SetDataToDelete(testImageLables.first);
+#ifndef _DEBUG
+    data.ShuffleTrnVldn();
+#endif
 
     return data;
 }

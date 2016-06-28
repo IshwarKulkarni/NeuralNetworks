@@ -117,6 +117,7 @@ public:
         TrainEpocStatuses.push_back(stat = new TrainEpocStatus(std::distance(begin, end), TrainEpocStatuses.size()));
         
         auto& pred = back()->GetAct()->ResultCmpPredicate;
+        
         for (auto iter = begin; iter != end; ++iter, stat->SamplesDone++)
         {
             iter->GetInput(f->GetInput());
@@ -125,12 +126,13 @@ public:
             auto& out = b->GetOutput();
             ErrorFunction->Prime(out, iter->Target, ErrFRes);
 
-            bool pass = std::equal(out.begin(), out.end(), iter->Target, pred);
+            //bool pass = std::equal(out.begin(), out.end(), iter->Target, pred);
+            bool pass(std::max_element(out.begin(), out.end()) - out.begin() ==
+                std::max_element(iter->Target, iter->Target + 10) - iter->Target);
 
             stat->TotNumPasses += pass;
             stat->LastPasses[stat->SamplesDone % stat->PassWinSize] = pass;
             b->BackwardPass(ErrFRes);
-            Sanity();
         }
         for (auto& l : *this) l->WeightDecay(EtaDecayRate);
 
