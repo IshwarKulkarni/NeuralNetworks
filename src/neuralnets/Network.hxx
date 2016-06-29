@@ -116,7 +116,7 @@ public:
         TrainEpocStatus* stat;
         TrainEpocStatuses.push_back(stat = new TrainEpocStatus(std::distance(begin, end), TrainEpocStatuses.size()));
         
-        auto& pred = back()->GetAct()->ResultCmpPredicate;
+        //auto& pred = back()->GetAct()->ResultCmpPredicate;
         
         for (auto iter = begin; iter != end; ++iter, stat->SamplesDone++)
         {

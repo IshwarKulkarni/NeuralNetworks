@@ -71,9 +71,9 @@ struct Kernel : public Volume
         Volume(Vec::Size3(desc.KernelSize.x | 1, desc.KernelSize.y | 1, ipSize.z)), // odd sizes only
         Stride(desc.KernelStride),
         Padded(desc.PaddedConvolution),
-        PadSize(Padded ? size/2 : Vec::Size3()),
         CStart(!Padded ? size / 2 : Vec::Size3()),
-        CEnd(Padded ? ipSize.x : ipSize.x - size.x/2, Padded ? ipSize.y : ipSize.y - size.y/2)
+        CEnd(Padded ? ipSize.x : ipSize.x - size.x/2, Padded ? ipSize.y : ipSize.y - size.y/2),
+        PadSize(Padded ? size / 2 : Vec::Size3())
     {
         double rs = 1. / sqrt(size());
 

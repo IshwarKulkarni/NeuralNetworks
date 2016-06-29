@@ -55,7 +55,6 @@ struct NeuralNetRunParams_t
 
 void statusMonitor(const Network* nn, bool& monitor)
 {
-    size_t checkNum = 0;
     static const string wheel = { char(176), char(177), char(178), char(219) , char(178),char(177) };
     while (monitor)
     {
@@ -73,8 +72,7 @@ void statusMonitor(const Network* nn, bool& monitor)
 
         cout
             << setw(4) << setprecision(4)
-            << "\rEpoch " << stat->EpochNum << "> [" << timeSpent << "s]"
-            //<< wheel[(checkNum++) % wheel.length()]
+            << "\rEpoch " << stat->EpochNum << "> [" << timeSpent << "s]\t"
             << " Complete : " << done
             << "%\tPass<" << stat->PassWinSize << ">: " << passRate
             << "%\tTotal Pass: " << cumPassRate * 100
