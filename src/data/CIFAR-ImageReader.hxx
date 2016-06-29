@@ -46,7 +46,7 @@ namespace CIFAR
 
     private:
 
-        const std::string CIFARImageLocation = "cifar-10-batches-bin\\", DataLocation;
+        const std::string CIFARImageLocation = "cifar-10-batches-bin//", DataLocation;
 
     public:
 
