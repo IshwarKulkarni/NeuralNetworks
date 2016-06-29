@@ -60,10 +60,11 @@ Network::Network(std::string configFile) :
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndNetworkDescription");
 
-            NVPP_GET_TYPE_WNAME(nvpp,EtaMultiplier);
             NVPP_GET_TYPE_WNAME(nvpp, EtaMultiplier);
             NVPP_GET_TYPE_WNAME(nvpp, EtaDecayRate);
             NVPP_GET_TYPE_WNAME(nvpp, WeightSanityCheck);
+
+            MultiplyEta(EtaMultiplier);
 
             std::string ErrFName = "MeanSquareError";
             NVPP_GET_TYPE_WNAME(nvpp, ErrFName);

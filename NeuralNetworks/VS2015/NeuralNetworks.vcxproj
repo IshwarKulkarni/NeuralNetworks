@@ -167,6 +167,7 @@
     <ClInclude Include="..\..\src\neuralnets\Network.hxx" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\data\CIFAR_Network.config" />
     <None Include="..\..\data\MNIST_LeNet-5.config" />
     <None Include="..\..\data\test1.config" />
   </ItemGroup>

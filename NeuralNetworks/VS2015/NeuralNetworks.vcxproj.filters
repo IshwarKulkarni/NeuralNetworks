@@ -73,5 +73,8 @@
     <None Include="..\..\data\test1.config">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="..\..\data\CIFAR_Network.config">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
