@@ -37,7 +37,7 @@ struct NeuralNetRunParams_t
     unsigned NumSamples, MaxEpocs, TargetAcc, RunTest, TopNFailIms;
 
     NeuralNetRunParams_t() :
-        DataLoc(DATA_LOCATION), ConfigFile("CIFAR_Network.config"),
+        DataLoc(DATA_LOCATION), ConfigFile("test1.config"),
         VldnFrac(0.05), TestFrac(0.05), NumSamples(-1), MaxEpocs(4), TargetAcc(98),
         RunTest(1), TopNFailIms(10)
     {
@@ -98,7 +98,7 @@ int main(int argc, char** argv)
     SetVldnTestFractions(rParam.VldnFrac, rParam.TestFrac);
     Vec::Size3 in; unsigned out;
 
-    auto data = LoadCifarData10(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
+    auto data = LoadMnistData2(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
     data.Summarize(Log, false);
 
     cout << "\nTraining... " << endl;
