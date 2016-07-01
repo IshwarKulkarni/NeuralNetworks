@@ -27,6 +27,8 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "utils/Vec23.hxx"
 #include "utils/SimpleMatrix.hxx"
 
+#define DATA_LOCATION "..\\..\\data\\"
+
 namespace CIFAR
 {
     static const size_t ImW = 32, ImH = 32;

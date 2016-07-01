@@ -22,6 +22,13 @@ FITNESS FOR A PARTICULAR PURPOSE.
 
 #include "Layer.hxx"
 
+#ifdef CUDA_PROJECT
+#include "Cuda_FullyConnectedLayer.cuh"
+#include "utils/CudaSimpleMatrix.cuh"
+#else
+//#error "Not Cuda project"
+#endif
+
 #ifdef _DEBUG
 #define NN_DEBUG 1
 #define NN_PRINT 1
@@ -74,7 +81,6 @@ struct Neuron
             Weights[i] -= dWeights[i] * eta;
     }
 
-
    std::ostream& Print(std::ostream& stream) const
     {
         for (unsigned i = 0; i < NumWeights(); ++i)
@@ -90,17 +96,29 @@ private:
 };
 
 
+SimpleMatrix::Matrix<double> GetWeightMatrix(const std::vector<Neuron>& Neurons)
+{
+    SimpleMatrix::Matrix<double> ret({ Neurons[0].NumWeights() + 1 , Neurons.size() });
+    for (size_t h = 0; h < Neurons.size(); h++)
+        for (size_t i = 0; i < Neurons[0].NumWeights(); ++i)
+            ret.data[h][i] = Neurons[h][i];
+    return ret;
+}
+
 class FullyConnectedLayer : public Layer
 {
 public:
 
-    FullyConnectedLayer(std::string name, unsigned NumInputs, unsigned NumNeurons,  std::string actName, Layer* prev = 0) :
+    FullyConnectedLayer(std::string name, size_t NumInputs, size_t NumNeurons,  std::string actName, Layer* prev = 0) :
         Layer(
             "FCLayer-" + name, 
             { NumInputs? NumInputs : prev->GetOutput().size(),1,1}, 
             { NumNeurons,1,1},
             actName,prev),
-        Neurons(NumNeurons, Neuron(NumInputs ? NumInputs : prev->GetOutput().size()))
+            Neurons(NumNeurons, Neuron(NumInputs ? NumInputs : prev->GetOutput().size()))
+#ifdef CUDA_PROJECT
+            , CudaNeurons(GetWeightMatrix(Neurons), actName)
+#endif
     {
         if (Prev && NumInputs > Prev->GetOutput().size())
             std::invalid_argument("NumInputs in FCLayer is larger than output of previous layer.");
@@ -113,6 +131,11 @@ public:
         for (size_t i = 0; i < Neurons.size(); i++)
             Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
+#ifdef CUDA_PROJECT
+        CudaNeurons.Fire(Input.data[0][0]);
+        auto res = CudaNeurons.Results.CompareDevToHost(Output.data[0][0]);
+        if (res.first) throw std::runtime_error("device and host computation disagree");
+#endif
         if (Next) Next->ForwardPass();
     }
 
@@ -157,6 +180,9 @@ public:
 
 protected:
     std::vector<Neuron> Neurons;
+#ifdef CUDA_PROJECT
+    CudaNeuronBlock CudaNeurons;
+#endif
 };
 
 #endif

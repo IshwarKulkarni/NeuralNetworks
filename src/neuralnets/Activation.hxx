@@ -26,6 +26,13 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <exception>
 #include "utils/Utils.hxx"
 
+#if defined( CUDA_PROJECT) && defined(__CUDA_ARCH__)
+#define DEVICE_AND_HOST __device__ __host__
+#else 
+#define DEVICE_AND_HOST 
+#endif
+
+DEVICE_AND_HOST
 double inline SigmoidActivation(double p, double& grad)
 {
     p = 1.f / (1.f + exp(-p));
@@ -33,6 +40,7 @@ double inline SigmoidActivation(double p, double& grad)
     return p;
 }
 
+DEVICE_AND_HOST
 double inline TanHActivation(double p, double& grad) 
 {
     p = tanh(p);
@@ -40,6 +48,7 @@ double inline TanHActivation(double p, double& grad)
     return p;
 }
 
+DEVICE_AND_HOST
 double inline RELUActivation(double p, double& grad)
 {
     if (p > 0) grad = 1;
@@ -78,6 +87,16 @@ inline Activation* GetActivationByName(std::string name)
         if (List[i].Name == name) return &(List[i]);
     
     throw std::invalid_argument( "Bad Activation name as argument: " + name);
+}
+
+
+inline ActivationFunction GetCudaActivationFunction(std::string name)
+{
+    if (name == "Sigmoid")  return SigmoidActivation;
+    if (name == "TanH")     return TanHActivation;
+    if (name == "RELU")     return RELUActivation;
+
+    throw std::runtime_error("No activation function with name : " + name);
 }
 
 #endif

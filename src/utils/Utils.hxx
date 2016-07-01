@@ -85,7 +85,7 @@ namespace Utils
         typedef std::set<Node> BaseMapType;
         const size_t N;
         TopN(size_t n) : N(n) {} 
-        size_t SetSize(size_t nN) { size_t oN = N; N = nN; return nN; }
+
         void insert(const Node & val)
         {
             Set.insert(val);

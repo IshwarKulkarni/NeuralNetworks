@@ -557,8 +557,10 @@ namespace SimpleMatrix
     TOuter** Emplace(TInner* inner, Vec::Size2 innerSize, Vec::Size2 outerSize, Vec::Loc loc = { 0,0 })
     {
         TOuter** outer = ColocAlloc<TOuter>(outerSize);
-        for (unsigned i = loc.y; i < loc.y + inner.y; ++i)
+        for (size_t i = loc.y; i < loc.y + innerSize.y; ++i)
             std::copy(outer[i], outer[i + innerSize.x], inner[i - loc.y]);
+
+        return outer;
     }
 
     template<typename TInner, typename TOuter>
@@ -569,9 +571,9 @@ namespace SimpleMatrix
     }
 
     template<typename T>
-    void RoundVertically(Matrix<T>& in, unsigned startCol = 0, unsigned endCol = -1)
+    void RoundVertically(Matrix<T>& in, unsigned startCol = 0, unsigned endCol = unsigned(-1))
     {
-        if (endCol == -1) endCol = in.size.x;
+        if (endCol == size_t(-1)) endCol = in.size.x;
 
         std::vector<Vec::pair<T> > minmax(endCol - startCol);
 

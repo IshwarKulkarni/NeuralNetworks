@@ -4,6 +4,8 @@ VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NeuralNetworks", "NeuralNetworks.vcxproj", "{352EF117-8B6E-4E7B-8480-D0C82F2DFE2B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CudaNeuralNetwork", "CudaNeuralNetwork.vcxproj", "{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -20,6 +22,14 @@ Global
 		{352EF117-8B6E-4E7B-8480-D0C82F2DFE2B}.Release|x64.Build.0 = Release|x64
 		{352EF117-8B6E-4E7B-8480-D0C82F2DFE2B}.Release|x86.ActiveCfg = Release|Win32
 		{352EF117-8B6E-4E7B-8480-D0C82F2DFE2B}.Release|x86.Build.0 = Release|Win32
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Debug|x64.ActiveCfg = Debug|x64
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Debug|x64.Build.0 = Debug|x64
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Debug|x86.ActiveCfg = Debug|Win32
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Debug|x86.Build.0 = Debug|Win32
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Release|x64.ActiveCfg = Release|x64
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Release|x64.Build.0 = Release|x64
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Release|x86.ActiveCfg = Release|Win32
+		{6EFBAF19-3D43-43D8-858D-9C77B7E27CEE}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
