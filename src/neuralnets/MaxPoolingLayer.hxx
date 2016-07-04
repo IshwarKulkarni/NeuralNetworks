@@ -49,7 +49,7 @@ struct MaxPoolingLayerDesc
         if( inSz.x % WindowSize.x || inSz.y % WindowSize.y)
             throw std::invalid_argument("Max pooling window leaves remainder\n");
 
-        return Vec::Size3(Utils::iDivUp(inSz.x, WindowSize.x), Utils::iDivUp(inSz.y, WindowSize.y), inSz.z);
+        return Vec::Size3(iDivUp(inSz.x, WindowSize.x), iDivUp(inSz.y, WindowSize.y), inSz.z);
     }
 
 private:

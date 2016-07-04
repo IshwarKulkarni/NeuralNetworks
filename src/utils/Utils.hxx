@@ -58,12 +58,6 @@ namespace Utils
         return (d1 <= 0.0 && d2 <= 0.0) || (d1 > 0.0 && d2 > 0.0);
     }
 
-    template<typename T>
-    inline T iDivUp(T a, T b)
-    {
-        return (a % b ? ((a / b) + 1) : (a / b));
-    }
-
     static std::default_random_engine Generator
 #ifndef _DEBUG
         (unsigned(std::chrono::system_clock::now().time_since_epoch().count()))
@@ -139,8 +133,7 @@ namespace Utils
 	void PrintLinear(std::ostream& outStream, Iter begin, size_t size, std::string message = "", std::string delim = ", ") // needs .size(), ,begin() and .end();
 	{
 		outStream << message << " [" << size << "]: ";
-		if (delim == "\n")
-			outStream << delim;
+		if (delim == "\n") outStream << delim;
 
 		if (size)
 			for (unsigned i = 0; i < size; ++i)

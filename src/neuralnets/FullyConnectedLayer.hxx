@@ -96,7 +96,7 @@ private:
 };
 
 
-SimpleMatrix::Matrix<double> GetWeightMatrix(const std::vector<Neuron>& Neurons)
+SimpleMatrix::Matrix<double> CompareWeightMatrix(const std::vector<Neuron>& Neurons)
 {
     SimpleMatrix::Matrix<double> ret({ Neurons[0].NumWeights() + 1 , Neurons.size() });
     for (size_t h = 0; h < Neurons.size(); h++)
@@ -132,7 +132,7 @@ public:
             Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
 #ifdef CUDA_PROJECT
-		CudaNeurons.Fire(Input.data[0][0]);// .CompareTo(Output.begin(), Output.end(), "FC Layer Output");
+		CudaNeurons.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "FCOp");
 #endif
         if (Next) Next->ForwardPass();
     }

@@ -122,7 +122,7 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is wei
         if (inSz() < desc.WindowSize())
             throw std::invalid_argument("Averaging window is larger than input size\n");
         
-        return Vec::Size3( Utils::iDivUp(inSz.x, desc.WindowSize.x), Utils::iDivUp(inSz.y,desc.WindowSize.y), inSz.z);
+        return Vec::Size3( iDivUp(inSz.x, desc.WindowSize.x), iDivUp(inSz.y,desc.WindowSize.y), inSz.z);
     }
 };
 

@@ -8,7 +8,6 @@
 #define NN_DEBUG 0
 #endif
 
-
 using namespace CudaSimpleMatrix;
 
 __global__ void DotAndActivate(
@@ -29,7 +28,11 @@ CudaNeuronBlock::CudaNeuronBlock(Vec::Size2 WeightsSize, ActivationId actId) :
 	Act(actId),
 	Weights(WeightsSize),
 	Results({ WeightsSize.y, 1 }),
-	LGrads({ WeightsSize.y, 1 })
+	Grads({ WeightsSize.y, 1 }),
+	LGrads({ WeightsSize.y, 1 }),
+	PGrads({WeightsSize.x-1, WeightsSize.y}),
+	Input({ WeightsSize.x - 1, 1 })
+
 {
 	double rs = double(1 / sqrt(Weights.size.x));
 	for (size_t i = 0; i < Weights.size(); ++i)
@@ -43,9 +46,12 @@ CudaNeuronBlock::~CudaNeuronBlock()
 	Weights.Clear();
 	Results.Clear();
 	LGrads.Clear();
+	Grads.Clear();
+	Input.Clear();
+	PGrads.Clear();
 }
 
-CudaSimpleMatrix::CudaMatrix<double> CudaNeuronBlock::Fire(double* input){
+CudaSimpleMatrix::CudaMatrix<double> CudaNeuronBlock::ForwardPass(double* input){
 
 	CudaSimpleMatrix::CudaMatrix<double> in({ Weights.size.x-1, 1 }, input);
 	

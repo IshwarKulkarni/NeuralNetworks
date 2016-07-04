@@ -9,11 +9,13 @@
 struct CudaNeuronBlock
 {
     ActivationId Act;
-    CudaSimpleMatrix::CudaMatrix<double> Weights, Results, LGrads;
-
+	CudaSimpleMatrix::CudaMatrix<double> Weights, Results, Grads, LGrads, PGrads, Input;
+	
 	CudaNeuronBlock(Vec::Size2 WeightSize, ActivationId actId);
 
-	CudaSimpleMatrix::CudaMatrix<double> Fire(double* input);
+	CudaSimpleMatrix::CudaMatrix<double> ForwardPass(double* input);
+	
+	CudaSimpleMatrix::CudaMatrix<double> BackWardPass(double* backError);
     
 	~CudaNeuronBlock();
 };

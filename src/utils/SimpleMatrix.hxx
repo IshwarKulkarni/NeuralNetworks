@@ -63,6 +63,7 @@ User Responsibility
 #define IF_DEBUG(a) if(false)
 #endif
 
+#define iDivUp(a, b) (size_t)( (a % b) ? (a / b + 1) : (a / b) )
 
 namespace SimpleMatrix
 {

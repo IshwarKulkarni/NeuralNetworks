@@ -42,12 +42,12 @@ namespace CudaSimpleMatrix {
 
 		__device__ __host__
 		T& at(size_t y, size_t x) { 
-			return devData[size.x*y + size.x]; 
+			return devData[size.x*y + x]; 
 		}
 
 		__device__ __host__
 		const T& at(size_t y, size_t x) const { 
-			return devData[size.x*y + size.x]; 
+			return devData[size.x*y + x]; 
 		}
 
         void Clear()
@@ -56,17 +56,18 @@ namespace CudaSimpleMatrix {
         }
 
 		template<typename Iter>
-		void CompareTo(Iter begin, Iter end, const char* msg)
+		void CompareTo(Iter begin, Iter end, const char* msg = "", bool throwErr = true )
 		{
-			Logging::Log << msg << " ... ";
 			if (!std::equal(begin, end, devData))
 			{
+				Logging::Log << msg << "\n";
 				Utils::PrintLinear(Logging::Log, begin, size(),  "\nHost:  \t");
 				Utils::PrintLinear(Logging::Log, devData, size(),"\nDevice:\t");
 				Logging::Log << Logging::Log.flush;
-				throw std::runtime_error("device and host computation disagree");
+				if (throwErr)
+					throw std::runtime_error("device and host computation disagree");
 			}
-			Logging::Log << " Match!\n";
+			
 
 		}
 

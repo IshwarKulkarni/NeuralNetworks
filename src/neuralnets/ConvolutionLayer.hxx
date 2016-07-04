@@ -139,7 +139,7 @@ struct Kernel : public Volume
         
         if (!desc.PaddedConvolution) inSz.x -= desc.KernelSize.x - 1, inSz.y -= desc.KernelSize.y - 1;
 
-        return Vec::Size3(Utils::iDivUp(inSz.x, stride.x), Utils::iDivUp(inSz.y, stride.y), desc.NumberOfKernels);
+        return Vec::Size3(iDivUp(inSz.x, stride.x), iDivUp(inSz.y, stride.y), desc.NumberOfKernels);
     }
 
     std::ostream& Print(std::ostream& stream)
