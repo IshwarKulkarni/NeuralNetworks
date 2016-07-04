@@ -427,7 +427,7 @@ namespace SimpleMatrix
     }
 
     template<typename T>
-    inline void Out2d(std::ostream& outStream, T& data, unsigned w, unsigned h, const char* msg = "", unsigned fwidth = 7)
+    inline void Out2d(std::ostream& outStream, T data, unsigned w, unsigned h, const char* msg = "", unsigned fwidth = 7)
     {
         outStream << msg << "\n";
 
@@ -466,7 +466,7 @@ namespace SimpleMatrix
                     outStream
                     << std::setw(fwidth + 1) << std::setfill(' ') << std::right;
 
-                outStream << data[i][j] << " | ";
+                outStream << data[0][i*w + j] << " | ";
             }
 
             outStream << "\n";

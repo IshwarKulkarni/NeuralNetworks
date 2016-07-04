@@ -26,13 +26,14 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <exception>
 #include "utils/Utils.hxx"
 
-#if defined( CUDA_PROJECT) && defined(__CUDA_ARCH__)
-#define DEVICE_AND_HOST __device__ __host__
-#else 
-#define DEVICE_AND_HOST 
+#if defined(CUDA_PROJECT) && defined(__CUDA_ARCH__)
+
+#define DEVICE_ __device__
+#else
+#define DEVICE_
 #endif
 
-DEVICE_AND_HOST
+DEVICE_
 double inline SigmoidActivation(double p, double& grad)
 {
     p = 1.f / (1.f + exp(-p));
@@ -40,7 +41,7 @@ double inline SigmoidActivation(double p, double& grad)
     return p;
 }
 
-DEVICE_AND_HOST
+DEVICE_
 double inline TanHActivation(double p, double& grad) 
 {
     p = tanh(p);
@@ -48,7 +49,7 @@ double inline TanHActivation(double p, double& grad)
     return p;
 }
 
-DEVICE_AND_HOST
+DEVICE_
 double inline RELUActivation(double p, double& grad)
 {
     if (p > 0) grad = 1;
@@ -56,11 +57,20 @@ double inline RELUActivation(double p, double& grad)
     return p;
 }
 
-typedef decltype(&SigmoidActivation)        ActivationFunction;
-typedef decltype(&Utils::RoundedCompare)    ResultCmpPredicateType;
+
+typedef double(*ActivationFunction)(double p, double& grad);
+typedef bool(*ResultCmpPredicateType)(double p1, double p2);
+
+enum ActivationId
+{
+	SigmoidActivationId,
+	TanHActivationId,
+	RELUActivationId
+};
 
 struct Activation
 {
+	ActivationId Id;
     std::string Name;
     ActivationFunction Function;
     ResultCmpPredicateType ResultCmpPredicate;
@@ -69,10 +79,19 @@ struct Activation
 };
 
 
+DEVICE_ inline double Activate(ActivationId activationList, double p, double& grad)
+{
+	if (activationList == SigmoidActivationId) return SigmoidActivation(p, grad);
+	if (activationList == TanHActivationId)	  return TanHActivation(p, grad);
+	if (activationList == RELUActivationId)	  return RELUActivation(p, grad);
+	else
+		return -1;
+}
+
 static Activation List[] = {
-    { "Sigmoid", SigmoidActivation,  Utils::RoundedCompare,  0.01,{ 0, 1 } },
-    { "TanH",    TanHActivation,     Utils::SameSign,        0.01,{ -.9, .9 } },
-    { "RELU",    RELUActivation,     Utils::RoundedCompare,  0.01,{ 0.1, .9 } },
+	{ SigmoidActivationId,	"Sigmoid",	SigmoidActivation,  Utils::RoundedCompare, 0.01, { 0, 1 } },
+	{ TanHActivationId,		"TanH",		TanHActivation,		Utils::SameSign,       0.01, { -.9, .9 } },
+	{ RELUActivationId,		"RELU",		RELUActivation,		Utils::RoundedCompare, 0.01, { 0.1, .9 } },
 };
 
 inline void MultiplyEta(double etaMul)
@@ -87,16 +106,6 @@ inline Activation* GetActivationByName(std::string name)
         if (List[i].Name == name) return &(List[i]);
     
     throw std::invalid_argument( "Bad Activation name as argument: " + name);
-}
-
-
-inline ActivationFunction GetCudaActivationFunction(std::string name)
-{
-    if (name == "Sigmoid")  return SigmoidActivation;
-    if (name == "TanH")     return TanHActivation;
-    if (name == "RELU")     return RELUActivation;
-
-    throw std::runtime_error("No activation function with name : " + name);
 }
 
 #endif

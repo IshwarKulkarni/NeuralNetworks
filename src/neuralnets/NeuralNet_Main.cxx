@@ -88,9 +88,10 @@ void statusMonitor(const Network* nn, bool& monitor)
 
 int main(int argc, char** argv)
 {
+	
     NameValuePairParser::MakeGlobalNVPP(argc, argv);
 
-    NeuralNetRunParams_t rParam;
+   NeuralNetRunParams_t rParam;
 
     cout << "\nBuilding network & data... ";
     Network nn(rParam.DataLoc + rParam.ConfigFile);
@@ -104,9 +105,11 @@ int main(int argc, char** argv)
     cout << "\nTraining... " << endl;
     Timer  epochTime("ClassifierTime");
 
-    auto monitor = true;
-    std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
-
+    auto monitor = true; std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
+#ifndef _DEBUG
+   
+#endif 
+	
     for (size_t epoch = 0; epoch < rParam.MaxEpocs; ++epoch)
     {
         epochTime.TimeFromLastCheck();
@@ -125,7 +128,11 @@ int main(int argc, char** argv)
     }
     
     monitor = false;
+#ifndef _DEBUG
     statMonitorThread.join();
+#endif // !_DEBUG
+
+
 
     if (rParam.RunTest)
     {

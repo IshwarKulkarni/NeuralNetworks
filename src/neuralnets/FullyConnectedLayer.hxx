@@ -117,7 +117,7 @@ public:
             actName,prev),
             Neurons(NumNeurons, Neuron(NumInputs ? NumInputs : prev->GetOutput().size()))
 #ifdef CUDA_PROJECT
-            , CudaNeurons(GetWeightMatrix(Neurons), actName)
+			, CudaNeurons({ NumInputs + 1, NumNeurons }, Act->Id)
 #endif
     {
         if (Prev && NumInputs > Prev->GetOutput().size())
@@ -132,9 +132,7 @@ public:
             Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
 #ifdef CUDA_PROJECT
-        CudaNeurons.Fire(Input.data[0][0]);
-        auto res = CudaNeurons.Results.CompareDevToHost(Output.data[0][0]);
-        if (res.first) throw std::runtime_error("device and host computation disagree");
+		CudaNeurons.Fire(Input.data[0][0]);// .CompareTo(Output.begin(), Output.end(), "FC Layer Output");
 #endif
         if (Next) Next->ForwardPass();
     }

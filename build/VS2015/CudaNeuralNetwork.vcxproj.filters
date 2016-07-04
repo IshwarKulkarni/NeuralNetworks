@@ -2,10 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{55834138-0d46-4693-b0dc-76feae38e39c}</UniqueIdentifier>
+      <UniqueIdentifier>{85bd1aaf-2a0b-450b-98ce-aa6f171cfb38}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{2d51e9c1-97bb-4491-ade8-149edc565698}</UniqueIdentifier>
+      <UniqueIdentifier>{73995d4f-6cf7-4ad9-85e0-2e52665b1977}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -26,11 +26,14 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\neuralnets\FullyConnectedLayer.hxx">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\neuralnets\Cuda_FullyConnectedLayer.cuh">
-      <Filter>Header Files</Filter>
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\FullyConnectedLayer.hxx">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\utils\CudaSimpleMatrix.cuh">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

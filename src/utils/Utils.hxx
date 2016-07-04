@@ -121,6 +121,33 @@ namespace Utils
     {
         o.write(static_cast<const char*>(&t), sizeof(t));
     }
+	
+	template<typename T>
+	void PrintLinear(std::ostream& outStream, const T& lin, std::string message = "", std::string delim = ", ") // needs .size(), ,begin() and .end();
+	{
+		outStream << message << " [" << lin.size() << "]: ";
+		if (delim == "\n")
+			outStream << delim;
+		if (lin.size())
+			for (const auto& elem : lin)
+				outStream << elem << delim;
+		else
+			outStream << "<Empty>";
+	}
+
+	template<typename Iter>
+	void PrintLinear(std::ostream& outStream, Iter begin, size_t size, std::string message = "", std::string delim = ", ") // needs .size(), ,begin() and .end();
+	{
+		outStream << message << " [" << size << "]: ";
+		if (delim == "\n")
+			outStream << delim;
+
+		if (size)
+			for (unsigned i = 0; i < size; ++i)
+				outStream << *begin++ << delim;
+		else
+			outStream << "<Empty>";
+	}
 
 }
 

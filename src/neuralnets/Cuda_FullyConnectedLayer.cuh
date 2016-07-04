@@ -8,25 +8,13 @@
 
 struct CudaNeuronBlock
 {
-    ActivationFunction Act;
+    ActivationId Act;
     CudaSimpleMatrix::CudaMatrix<double> Weights, Results, LGrads;
 
-    CudaNeuronBlock(SimpleMatrix::Matrix<double>& NeuronWeights, std::string activationName ):
-        Act(GetCudaActivationFunction(activationName)),
-        Weights(NeuronWeights),
-        Results({ NeuronWeights.size.y,1 }),
-        LGrads({ NeuronWeights.size.y,1 })
-    {
-        NeuronWeights.Clear(); // Creator should destroy this. Bad!
-    }
+	CudaNeuronBlock(Vec::Size2 WeightSize, ActivationId actId);
 
-    void Fire(double* input);
+	CudaSimpleMatrix::CudaMatrix<double> Fire(double* input);
     
-    ~CudaNeuronBlock()
-    {
-        Weights.Clear();
-        Results.Clear();
-        LGrads.Clear();
-    }
+	~CudaNeuronBlock();
 };
 #endif 

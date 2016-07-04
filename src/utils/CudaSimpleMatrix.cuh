@@ -3,9 +3,20 @@
 #include <algorithm>
 
 #include "cuda_runtime.h"
+#include "cuda_runtime_api.h"
 #include "SimpleMatrix.hxx"
-#include "Vec23.hxx"
 
+#include <iostream>
+
+#define CUDA_CHECK(Err) if((Err) != cudaSuccess) { \
+    std::cerr << "\nCuda error at " << __FUNCTION__ << " " << __FILE__ << "(" << __LINE__ << "): "  \
+              << cudaGetErrorString(cudaGetLastError()); \
+    throw std::runtime_error( std::string("Cuda Error ") + cudaGetErrorString(cudaGetLastError()));\
+} 
+
+#define CUDA_CHECK_SYNCH CUDA_CHECK(cudaDeviceSynchronize());
+
+#define CUDA_CHECK_FREE(ptr)  CUDA_CHECK(cudaFree(ptr));
 
 namespace CudaSimpleMatrix {
 
@@ -14,61 +25,61 @@ namespace CudaSimpleMatrix {
     {
         CudaMatrix(Vec::Size2 s, T* inData = nullptr) : size(s)
         {
-            const size_t sizeW = sizeof(T)*size.x;
+            CUDA_CHECK(cudaMallocManaged(&devData, size() * sizeof(T), cudaMemAttachGlobal));
 
-            if (cudaMallocPitch(&devData, &size.z, sizeW, size.y))
-                throw std::runtime_error("Cannot do pitched malloc.");
-
-            if (inData && devData)
-                if( cudaMemcpy2D(devData, size.z, inData, sizeW, sizeW, size.y, cudaMemcpyHostToDevice) )
-                    throw std::runtime_error("Cannot do cudaMemcpy.");
+            if (inData) 
+                CUDA_CHECK(cudaMemcpy(devData, inData, size()* sizeof(T),cudaMemcpyHostToDevice));
         }
 
         CudaMatrix(const SimpleMatrix::Matrix<T>& mat) : size(mat.size)
         {
             if (!mat.size())  throw std::runtime_error("Cannot construct from empty Matrix");
             
-            const size_t sizeW = sizeof(T)*size.x;
+            CUDA_CHECK(cudaMallocManaged(&devData, mat.size() * sizeof(T), cudaMemAttachGlobal));
 
-            if (cudaMallocPitch(&devData, &size.z, sizeW, size.y) )
-                throw std::runtime_error("Cannot do pitched malloc.");
-
-            if (devData)
-                if (cudaMemcpy2D(devData, size.z, mat.data, sizeW, sizeW, size.y, cudaMemcpyHostToDevice))
-                    throw std::runtime_error("Cannot do cudaMemcpy.");
+            CUDA_CHECK(cudaMemcpy(devData, mat.data[0], mat.size()* sizeof(T), cudaMemcpyHostToDevice));
         }
+
+		__device__ __host__
+		T& at(size_t y, size_t x) { 
+			return devData[size.x*y + size.x]; 
+		}
+
+		__device__ __host__
+		const T& at(size_t y, size_t x) const { 
+			return devData[size.x*y + size.x]; 
+		}
 
         void Clear()
         {
-            if (devData && cudaFree(devData))
-                throw std::runtime_error("could not free pointer");
+            CUDA_CHECK(devData && cudaFree(devData));
         }
 
-        T* CopyOut()
-        {
-            T* out = new T[size.x*size.y];
-            if (cudaMemcpy2D(out, size.x*sizeof(T), devData, size.z, size.x*sizeof(T), size.y, cudaMemcpyDeviceToHost))
-                throw std::runtime_error("Cuda memcpy out failed");
+		template<typename Iter>
+		void CompareTo(Iter begin, Iter end, const char* msg)
+		{
+			Logging::Log << msg << " ... ";
+			if (!std::equal(begin, end, devData))
+			{
+				Utils::PrintLinear(Logging::Log, begin, size(),  "\nHost:  \t");
+				Utils::PrintLinear(Logging::Log, devData, size(),"\nDevice:\t");
+				Logging::Log << Logging::Log.flush;
+				throw std::runtime_error("device and host computation disagree");
+			}
+			Logging::Log << " Match!\n";
 
-            return out;
-        }
-
-        std::pair<T*,size_t> CompareDevToHost(T* hostPtr)
-        {
-            T* devData = CopyOut();
-            auto mis = std::mismatch(hostPtr, hostPtr + size.x * size.y, devData);
-            if (mis.first == hostPtr + size.x * size.y)
-            {
-                delete[] devData;
-                return make_pair(nullptr, 0);
-            }
-            return make_pair(devData , mis.first - devData);
-
-        }
+		}
 
         T* devData;
-        Vec::Size3 size; // let's say z is size.z
+        Vec::Size2 size; // let's say pitch (in element size) is size.z
+
+		void Print(std::ostream& o)
+		{
+			SimpleMatrix::Out2d(o, &devData, size.x, size.y);
+			o.flush();
+		}
     };
+
 }
 
 #endif
