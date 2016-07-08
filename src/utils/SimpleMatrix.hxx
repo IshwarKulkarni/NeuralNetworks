@@ -428,7 +428,7 @@ namespace SimpleMatrix
     }
 
     template<typename T>
-    inline void Out2d(std::ostream& outStream, T data, unsigned w, unsigned h, const char* msg = "", unsigned fwidth = 7)
+    inline void Out2d(std::ostream& outStream, T data, size_t w, size_t h, const char* msg = "", unsigned fwidth = 7)
     {
         outStream << msg << "\n";
 
@@ -436,7 +436,7 @@ namespace SimpleMatrix
             fwidth = 2;
 
         unsigned digits = 0;
-        unsigned w1 = w; while (w1) w1 /= 10, digits++, outStream << ' ';
+        size_t w1 = w; while (w1) w1 /= 10, digits++, outStream << ' ';
         outStream << " |";
 
         for (unsigned j = 0; j < w; ++j)
@@ -478,7 +478,7 @@ namespace SimpleMatrix
     }
 
     template<>
-    inline void Out2d(std::ostream& outStream, bool**& data, unsigned w, unsigned h, const char* msg, unsigned fwidth)
+    inline void Out2d(std::ostream& outStream, bool**& data, size_t w, size_t h, const char* msg, unsigned fwidth)
     {
         for (size_t i = 0; i < h; ++i)
         {

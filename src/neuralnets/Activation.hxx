@@ -79,20 +79,38 @@ struct Activation
 };
 
 
-DEVICE_ inline double Activate(ActivationId activationList, double p, double& grad)
+DEVICE_ inline double Activate(ActivationId activationId, double p) // redesign this
 {
-	if (activationList == SigmoidActivationId) return SigmoidActivation(p, grad);
-	if (activationList == TanHActivationId)	  return TanHActivation(p, grad);
-	if (activationList == RELUActivationId)	  return RELUActivation(p, grad);
+    if (activationId == SigmoidActivationId)  return 1.f / (1.f + exp(-p));
+    if (activationId == TanHActivationId)	  return tanh(p);
+    if (activationId == RELUActivationId)	  return (p > 0 ? p : 0);
 	else
 		return -1;
 }
+
+DEVICE_ inline double ActivatePrime(ActivationId activationId, double p) // redesign this
+{
+    if (activationId == SigmoidActivationId)  return p * (1 - p);
+    if (activationId == TanHActivationId)	  return 1 - p*p;
+    if (activationId == RELUActivationId)	  return (p > 0 ? 1 : 0);
+    else
+        return -1;
+}
+
 
 static Activation List[] = {
 	{ SigmoidActivationId,	"Sigmoid",	SigmoidActivation,  Utils::RoundedCompare, 0.01, { 0, 1 } },
 	{ TanHActivationId,		"TanH",		TanHActivation,		Utils::SameSign,       0.01, { -.9, .9 } },
 	{ RELUActivationId,		"RELU",		RELUActivation,		Utils::RoundedCompare, 0.01, { 0.1, .9 } },
 };
+
+inline double GetEta(ActivationId activationId)
+{
+	for (unsigned i = 0; i < ARRAY_LENGTH(List); ++i)
+		if (List[i].Id == activationId) return List[i].Eta;
+
+	return -1;
+}
 
 inline void MultiplyEta(double etaMul)
 {

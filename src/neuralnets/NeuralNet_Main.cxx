@@ -38,7 +38,7 @@ struct NeuralNetRunParams_t
 
     NeuralNetRunParams_t() :
         DataLoc(DATA_LOCATION), ConfigFile("test1.config"),
-        VldnFrac(0.05), TestFrac(0.05), NumSamples(-1), MaxEpocs(4), TargetAcc(98),
+        VldnFrac(0.05), TestFrac(0.05), NumSamples(10), MaxEpocs(4), TargetAcc(98),
         RunTest(1), TopNFailIms(10)
     {
         GLOBAL_OF_TYPE_WNAME(NumSamples);
@@ -128,11 +128,7 @@ int main(int argc, char** argv)
     }
     
     monitor = false;
-#ifndef _DEBUG
     statMonitorThread.join();
-#endif // !_DEBUG
-
-
 
     if (rParam.RunTest)
     {

@@ -5,20 +5,35 @@
 #include "cuda_runtime.h"
 #include "cuda_runtime_api.h"
 #include "SimpleMatrix.hxx"
+#include "utils/CudaUtils.cuh"
 
 #include <iostream>
 
-#define CUDA_CHECK(Err) if((Err) != cudaSuccess) { \
-    std::cerr << "\nCuda error at " << __FUNCTION__ << " " << __FILE__ << "(" << __LINE__ << "): "  \
-              << cudaGetErrorString(cudaGetLastError()); \
-    throw std::runtime_error( std::string("Cuda Error ") + cudaGetErrorString(cudaGetLastError()));\
-} 
-
-#define CUDA_CHECK_SYNCH CUDA_CHECK(cudaDeviceSynchronize());
-
-#define CUDA_CHECK_FREE(ptr)  CUDA_CHECK(cudaFree(ptr));
-
 namespace CudaSimpleMatrix {
+
+
+	template<typename T> struct CuMaxOp  { __device__ __forceinline__ T Apply(const T& t1, const T& t2) const { return (t1 > t2 ? t1 : t2); } };
+	template<typename T> struct CuMinOp  { __device__ __forceinline__ T Apply(const T& t1, const T& t2) const { return (t1 > t2 ? t2 : t1); } };
+	template<typename T> struct CuBinAdd { __device__ __forceinline__ T Apply(const T& t1, const T& t2) const { return t1 + t2; } };
+
+    template<typename T, typename BinOp>
+    __global__
+        void reduceHorizontally(T *g_idata, T *g_odata) {  // 1 row of g_data matrix should fit in smem
+        extern __shared__ T sdata[];
+
+        unsigned tid = threadIdx.x, i = blockIdx.x*blockDim.x * 2 + threadIdx.x;
+        BinOp bop;
+        sdata[tid] = bop.Apply(g_idata[i], g_idata[i + blockDim.x]);
+        __syncthreads();
+
+        for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
+            if (tid < s)
+                sdata[tid] = bop.Apply(sdata[tid], sdata[tid + s]);
+            __syncthreads();
+        }
+
+        if (tid == 0) g_odata[blockIdx.x] = sdata[0];
+    }
 
     template<typename T>
     struct CudaMatrix 
@@ -40,47 +55,43 @@ namespace CudaSimpleMatrix {
             CUDA_CHECK(cudaMemcpy(devData, mat.data[0], mat.size()* sizeof(T), cudaMemcpyHostToDevice));
         }
 
-		__device__ __host__
-		T& at(size_t y, size_t x) { 
-			return devData[size.x*y + x]; 
-		}
+		__device__ __host__  T& at(size_t y, size_t x) { return devData[size.x*y + x];  }
 
-		__device__ __host__
-		const T& at(size_t y, size_t x) const { 
-			return devData[size.x*y + x]; 
-		}
+		__device__ __host__ const T& at(size_t y, size_t x) const { return devData[size.x*y + x]; }
 
-        void Clear()
+        void Clear() { CUDA_CHECK(devData && cudaFree(devData));  devData = nullptr; }
+
+        template<typename Iter>
+        void CompareTo(Iter begin, Iter end, const char* msg = "", bool throwErr = true, size_t offset = 0)
         {
-            CUDA_CHECK(devData && cudaFree(devData));
+            if (!CudaUtils::DevHostCmp(begin, end, devData) && throwErr)
+            {
+                Logging::Log << "\n" << msg << " match failed" << Logging::Log.flush;
+                throw std::runtime_error("device and host computation disagree");
+            }
         }
 
-		template<typename Iter>
-		void CompareTo(Iter begin, Iter end, const char* msg = "", bool throwErr = true )
-		{
-			if (!std::equal(begin, end, devData))
-			{
-				Logging::Log << msg << "\n";
-				Utils::PrintLinear(Logging::Log, begin, size(),  "\nHost:  \t");
-				Utils::PrintLinear(Logging::Log, devData, size(),"\nDevice:\t");
-				Logging::Log << Logging::Log.flush;
-				if (throwErr)
-					throw std::runtime_error("device and host computation disagree");
-			}
-			
-
-		}
+        template <typename U>
+        void Copy(const U* in) // std copy for managed. enhance for pure dev ptr later
+        {
+            for (size_t i = 0; i < size(); ++i) devData[i] = *in++;
+        }
 
         T* devData;
-        Vec::Size2 size; // let's say pitch (in element size) is size.z
+        Vec::Size2 size; 
 
-		void Print(std::ostream& o)
+		void Print(std::ostream& o = Logging::Log)
 		{
 			SimpleMatrix::Out2d(o, &devData, size.x, size.y);
 			o.flush();
 		}
+
+	private:
+
+		CudaMatrix() {};
     };
 
 }
 
 #endif
+ 

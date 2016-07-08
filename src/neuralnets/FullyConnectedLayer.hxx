@@ -91,19 +91,20 @@ struct Neuron
         return stream;
     }
 
+   void Compare(double* dev) {
+       if (!CudaUtils::DevHostCmp(Weights.begin(), Weights.end(), dev))
+           throw std::runtime_error("Comp failed");
+   }
+
+   double* CopyWeights(double* dev)
+   {
+	   return std::copy(Weights.begin(), Weights.end(), dev);
+   }
+   
 private:
-    Row Weights, dWeights; // Nth index is Bias
+    Row Weights,  dWeights; // Nth index is Bias
 };
 
-
-SimpleMatrix::Matrix<double> CompareWeightMatrix(const std::vector<Neuron>& Neurons)
-{
-    SimpleMatrix::Matrix<double> ret({ Neurons[0].NumWeights() + 1 , Neurons.size() });
-    for (size_t h = 0; h < Neurons.size(); h++)
-        for (size_t i = 0; i < Neurons[0].NumWeights(); ++i)
-            ret.data[h][i] = Neurons[h][i];
-    return ret;
-}
 
 class FullyConnectedLayer : public Layer
 {
@@ -117,13 +118,17 @@ public:
             actName,prev),
             Neurons(NumNeurons, Neuron(NumInputs ? NumInputs : prev->GetOutput().size()))
 #ifdef CUDA_PROJECT
-			, CudaNeurons({ NumInputs + 1, NumNeurons }, Act->Id)
+			, CudaNeurons( NumInputs, NumNeurons , Act->Id)
 #endif
     {
         if (Prev && NumInputs > Prev->GetOutput().size())
             std::invalid_argument("NumInputs in FCLayer is larger than output of previous layer.");
         
         for (auto& n : Neurons) n.InitWeights();
+#ifdef CUDA_PROJECT
+		double* dev = CudaNeurons.Weights.devData;
+		for (auto& n : Neurons) dev = n.CopyWeights(dev);
+#endif
     }
 
     virtual void ForwardPass()
@@ -132,7 +137,7 @@ public:
             Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
 #ifdef CUDA_PROJECT
-		CudaNeurons.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "FCOp");
+		CudaNeurons.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "\nFCOp");
 #endif
         if (Next) Next->ForwardPass();
     }
@@ -149,6 +154,11 @@ public:
                 Neurons[n].BackwardPass(Eta, Grads[n], PGrads, Input);
 
             Prev->BackwardPass(PGrads);
+#ifdef CUDA_PROJECT
+            CudaNeurons.BackwardPass(backError.data[0][0], Eta).CompareTo(PGrads.begin(), PGrads.end(), "\nPGrads");
+            for (size_t i = 0; i < Neurons.size(); ++i)
+                Neurons[i].Compare(CudaNeurons.Weights.devData + i *CudaNeurons.Weights.size.x);
+#endif
         }
         else
             for (size_t j = 0; j < Neurons.size(); ++j)

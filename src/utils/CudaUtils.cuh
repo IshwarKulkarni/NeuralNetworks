@@ -61,13 +61,13 @@ namespace CudaUtils
     bool DevHostCmp(Iter begin, Iter end, T* devData)
     {
         struct { bool operator()(double a, double b){return abs(a - b) < (10e-12); }} cmp;            
-        auto dist = std::distance(begin, end);
-            Utils::PrintLinear(Logging::Log, begin, dist, "\nHost:  \t");
-            Utils::PrintLinear(Logging::Log, devData, dist, "\nDevice:\t");
+       
         if (!std::equal(begin, end, devData, cmp))
         {
             Logging::Log << setprecision(9);
-           
+            auto dist = std::distance(begin, end);
+            Utils::PrintLinear(Logging::Log, begin, dist, "\nHost:  \t");
+            Utils::PrintLinear(Logging::Log, devData, dist, "\nDevice:\t");
             Logging::Log << Logging::Log.flush;
             return false;
         }
