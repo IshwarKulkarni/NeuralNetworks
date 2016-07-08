@@ -25,7 +25,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "utils/CudaSimpleMatrix.cuh"
 #include "Activation.hxx"
 
-struct CudaNeuronBlock
+struct CudaFullyConnectedLayer
 {
     unsigned NumNeurons;
     unsigned NumInputs;// Not Bias
@@ -33,13 +33,13 @@ struct CudaNeuronBlock
     ActivationId Act;
 	CudaSimpleMatrix::CudaMatrix<double> Weights,  Results, Grads, LGrads, PGrads, Input;
 	
-    CudaNeuronBlock(unsigned numInputs, unsigned numNeurons, ActivationId actId);
+    CudaFullyConnectedLayer(unsigned numInputs, unsigned numNeurons, ActivationId actId);
 
 	CudaSimpleMatrix::CudaMatrix<double> ForwardPass(double* input);
 
 	CudaSimpleMatrix::CudaMatrix<double> BackwardPass(double* backError, double e);
     
-	~CudaNeuronBlock();
+	~CudaFullyConnectedLayer();
 
 	CudaUtils::KernelLaunchParams FwdPassKLP, BwdPassKLP;
 	bool FwdSingleBlock, BwdSingleBlock;

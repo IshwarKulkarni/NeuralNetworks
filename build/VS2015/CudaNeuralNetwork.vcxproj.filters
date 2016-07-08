@@ -26,9 +26,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\neuralnets\Cuda_FullyConnectedLayer.cuh">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\utils\CudaSimpleMatrix.cuh">
       <Filter>Header Files</Filter>
     </ClInclude>

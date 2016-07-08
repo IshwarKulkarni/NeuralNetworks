@@ -39,7 +39,7 @@ struct NeuralNetRunParams_t
     NeuralNetRunParams_t() :
         DataLoc(DATA_LOCATION), ConfigFile("test1.config"),
         VldnFrac(0.05), TestFrac(0.05), NumSamples(10), MaxEpocs(4), TargetAcc(98),
-        RunTest(1), TopNFailIms(10)
+        RunTest(1), TopNFailIms(0)
     {
         GLOBAL_OF_TYPE_WNAME(NumSamples);
         GLOBAL_OF_TYPE_WNAME(DataLoc);

@@ -27,7 +27,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\neuralnets\Activation.hxx" />
-    <ClInclude Include="..\..\src\neuralnets\Cuda_FullyConnectedLayer.cuh" />
     <ClInclude Include="..\..\src\neuralnets\FullyConnectedLayer.hxx" />
     <ClInclude Include="..\..\src\utils\CudaSimpleMatrix.cuh" />
     <ClInclude Include="..\..\src\utils\CudaUtils.cuh" />

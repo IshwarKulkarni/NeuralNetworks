@@ -17,7 +17,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 
 */
 
-#include "Cuda_FullyConnectedLayer.cuh"
+#include "CudaLayers.cuh"
 
 #ifdef _DEBUG
 #define NN_DEBUG 1
@@ -32,7 +32,7 @@ using namespace std::chrono;
 using namespace CudaUtils;
 using namespace std;
 
-CudaNeuronBlock::CudaNeuronBlock(unsigned numInputs, unsigned numNeurons, ActivationId actId) :
+CudaFullyConnectedLayer::CudaFullyConnectedLayer(unsigned numInputs, unsigned numNeurons, ActivationId actId) :
 	NumNeurons(numNeurons),
     NumInputs(numInputs),
     Act(actId),
@@ -54,7 +54,7 @@ CudaNeuronBlock::CudaNeuronBlock(unsigned numInputs, unsigned numNeurons, Activa
 
 }
 
-CudaNeuronBlock::~CudaNeuronBlock()
+CudaFullyConnectedLayer::~CudaFullyConnectedLayer()
 {
 	Weights.Clear();
 	Results.Clear();
@@ -95,7 +95,7 @@ __global__ void forwardPass( unsigned numInputs, ActivationId act,
     if (x==0) res[y] = Activate(act, smem[0]); //1ST;
 }
 
-CudaSimpleMatrix::CudaMatrix<double> CudaNeuronBlock::ForwardPass(double* input){
+CudaSimpleMatrix::CudaMatrix<double> CudaFullyConnectedLayer::ForwardPass(double* input){
 
     Input.Copy(input);
    
@@ -140,7 +140,7 @@ __global__ void backwardPass(unsigned numInputs, unsigned numNeurons, Activation
     if (y == 0) pgds[x] = pgd[x]; //1ST
 }
 
-CudaSimpleMatrix::CudaMatrix<double> CudaNeuronBlock::BackwardPass(double* backError, double eta)
+CudaSimpleMatrix::CudaMatrix<double> CudaFullyConnectedLayer::BackwardPass(double* backError, double eta)
 {
     Grads.Copy(backError);
   

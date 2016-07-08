@@ -23,7 +23,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "Layer.hxx"
 
 #ifdef CUDA_PROJECT
-#include "Cuda_FullyConnectedLayer.cuh"
+#include "CudaLayers.cuh"
 #include "utils/CudaSimpleMatrix.cuh"
 #else
 //#error "Not Cuda project"
@@ -90,7 +90,7 @@ struct Neuron
 
         return stream;
     }
-
+#ifdef CUDA_PROJECT
    void Compare(double* dev) {
        if (!CudaUtils::DevHostCmp(Weights.begin(), Weights.end(), dev))
            throw std::runtime_error("Comp failed");
@@ -100,7 +100,7 @@ struct Neuron
    {
 	   return std::copy(Weights.begin(), Weights.end(), dev);
    }
-   
+#endif
 private:
     Row Weights,  dWeights; // Nth index is Bias
 };
@@ -189,7 +189,7 @@ public:
 protected:
     std::vector<Neuron> Neurons;
 #ifdef CUDA_PROJECT
-    CudaNeuronBlock CudaNeurons;
+    CudaFullyConnectedLayer CudaNeurons;
 #endif
 };
 
