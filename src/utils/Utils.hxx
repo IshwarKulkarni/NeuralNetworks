@@ -43,27 +43,54 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #define strktok(a,b) strtok_s((a),(b))
 #endif
 
+#ifdef CUDA_PROJECT
+#define float_t WHYDOESMATHHDEFINETHIS
+typedef float float_t;
+#else
+typedef float float_t;
+#endif
+
 namespace Utils
 {
     template<typename T> T Identity(T t) { return t; }
     template<typename T, typename U> T Identity(T t, U u) { return t = u; }
 
-    inline bool RoundedCompare(double d1, double d2)
+    inline bool RoundedCompare(float_t d1, float_t d2)
     {
         return int(d1 + 0.5) == int(d2 + 0.5);
     }
 
-    inline bool SameSign(double d1, double d2)
+    inline bool SameSign(float_t d1, float_t d2)
     {
         return (d1 <= 0.0 && d2 <= 0.0) || (d1 > 0.0 && d2 > 0.0);
     }
 
+    template <typename T, typename U = long long>
+    struct BitRep
+    {
+        union C{ U u; T t; }c;
+        inline BitRep(const T& _t) { c.t = _t; }
+        inline U operator ()() const { return c.u; }
+    };
+
+    template<typename T, unsigned Tol = 2>
+    bool FloatCompare(const T& a, const T& b)
+    {
+        return abs(a - b) <= Tol * std::numeric_limits<T>::epsilon();
+    }
+    
+    template<typename T, unsigned Tol>
+    bool BitCompare(const T& a, const T& b)
+    {
+        return abs(Utils::BitRep<T>(a)() - Utils::BitRep<T>(b)()) <= Tol;
+    }
+    
     static std::default_random_engine Generator
 #ifndef _DEBUG
         (unsigned(std::chrono::system_clock::now().time_since_epoch().count()))
 #endif
         ;
-    static std::uniform_real_distribution<double> distribution(0.0, 100.0);
+    static std::uniform_real_distribution<float_t> distribution(0.0, 100.0);
 
     template<typename T>
     inline T URand(T high = 1.0, T low = 0.0)
@@ -102,10 +129,10 @@ namespace Utils
         return "\b\b\b\b";
     }
 
-    inline double TimeSince(std::chrono::high_resolution_clock::time_point& since)
+    inline float_t TimeSince(std::chrono::high_resolution_clock::time_point& since)
     {
         auto now = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration = std::chrono::duration_cast<std::chrono::duration<double>>(now - 
+        std::chrono::duration<float_t> duration = std::chrono::duration_cast<std::chrono::duration<float_t>>(now - 
             since);
         return duration.count();
     }
@@ -120,8 +147,7 @@ namespace Utils
 	void PrintLinear(std::ostream& outStream, const T& lin, std::string message = "", std::string delim = ", ") // needs .size(), ,begin() and .end();
 	{
 		outStream << message << " [" << lin.size() << "]: ";
-		if (delim == "\n")
-			outStream << delim;
+		if (delim == "\n") outStream << delim;
 		if (lin.size())
 			for (const auto& elem : lin)
 				outStream << elem << delim;
@@ -380,25 +406,25 @@ namespace Logging
             if (!Stopped)
             {
                 End = std::chrono::high_resolution_clock::now();
-                Span = std::chrono::duration_cast<std::chrono::duration<double>>(End - Start);
+                Span = std::chrono::duration_cast<std::chrono::duration<float_t>>(End - Start);
                 if (LogAtStop && TimerName.length())
                     Log << "\n\"" << TimerName << "\"" << " Ended at " << TimeNowStringFull() << ". Duration was " << Span.count() << " seconds.\n";
             }
         }
 
-        double TimeFromLastCheck()
+        float_t TimeFromLastCheck()
         {
-            std::chrono::duration<double> span = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - LastCheck);
+            std::chrono::duration<float_t> span = std::chrono::duration_cast<std::chrono::duration<float_t>>(std::chrono::high_resolution_clock::now() - LastCheck);
             LastCheck = std::chrono::high_resolution_clock::now();
             return span.count();
         }
 
-        double Stop()
+        float_t Stop()
         {
             if (Stopped)
                 return Span.count();
             End = std::chrono::high_resolution_clock::now();
-            Span += std::chrono::duration_cast<std::chrono::duration<double>>(End - Start);
+            Span += std::chrono::duration_cast<std::chrono::duration<float_t>>(End - Start);
             if (LogAtStop)
                 Log << "\"" << TimerName << "\"" << " Stopped at " << TimeNowStringFull() << ". Duration was " << Span.count() << " seconds.\n";
             Stopped = true;
@@ -408,7 +434,7 @@ namespace Logging
         void Restart()
         {
             End = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double>  pause = std::chrono::duration_cast<std::chrono::duration<double>>(End - Start);
+            std::chrono::duration<float_t>  pause = std::chrono::duration_cast<std::chrono::duration<float_t>>(End - Start);
             if (LogAtStop)
                 Log << "\"" << TimerName << "\"" << " Restarted at " << TimeNowStringFull() << ". Duration from start was: " << pause.count() << " seconds.\n";
 
@@ -417,7 +443,7 @@ namespace Logging
 
     private:
 
-        std::chrono::duration<double> Span;
+        std::chrono::duration<float_t> Span;
         std::chrono::high_resolution_clock::time_point Start, End/*Uninitilized*/, LastCheck;
         std::string TimerName;
         bool Stopped, LogAtStop;

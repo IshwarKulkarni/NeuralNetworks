@@ -34,8 +34,8 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #define CNN_DEBUG 0
 #endif
 
-typedef SimpleMatrix::Matrix3<double> Volume;
-typedef SimpleMatrix::Matrix<double> Frame;
+typedef SimpleMatrix::Matrix3<float_t> Volume;
+typedef SimpleMatrix::Matrix<float_t> Frame;
 
 static unsigned NumLayers2 = 0;
 
@@ -78,8 +78,8 @@ public:
 
     virtual void BackwardPass(Volume& backError) = 0;
 
-    virtual void WeightDecay(double decayRate) { Eta *= decayRate; }
-    virtual double& GetEta() { return Eta; }
+    virtual void WeightDecay(float_t decayRate) { Eta *= decayRate; }
+    virtual float_t& GetEta() { return Eta; }
 
     virtual void Print(std::string printList, std::ostream& out = Logging::Log) const
     {
@@ -103,7 +103,7 @@ public:
     
     const Volume& GetOutput() const { return Output; }
 
-    inline SimpleMatrix::Matrix3<double>& GetInput()  { return Input; }
+    inline SimpleMatrix::Matrix3<float_t>& GetInput()  { return Input; }
     
     void WeightSanity()    {
         
@@ -142,7 +142,7 @@ protected:
     Volume      Output, LGrads, Grads, PGrads;
     Volume      Input;
     Activation* Act;
-    double      Eta;
+    float_t      Eta;
 
 };
 

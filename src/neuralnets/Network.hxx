@@ -32,8 +32,8 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "ErrorFunctions.hxx"
 
 
-typedef SimpleMatrix::Matrix3<double> Volume;
-typedef SimpleMatrix::Matrix<double> Frame;
+typedef SimpleMatrix::Matrix3<float_t> Volume;
+typedef SimpleMatrix::Matrix<float_t> Frame;
 
 enum NetworkStatus
 {
@@ -48,8 +48,8 @@ enum NetworkStatus
 class Network : public std::vector<Layer*> // yeah, thou shalt not inherit from STL containers! Sue me!
 {
     Volume ErrFRes;
-    double  EtaMultiplier;
-    double  EtaDecayRate;
+    float_t  EtaMultiplier;
+    float_t  EtaDecayRate;
 
     bool WeightSanityCheck;
     
@@ -58,7 +58,7 @@ class Network : public std::vector<Layer*> // yeah, thou shalt not inherit from 
     Layer *f, *b;
 
     size_t NumVal;
-    double NumValCorrect, VldnRMSE;
+    float_t NumValCorrect, VldnRMSE;
     std::string ConfigSource;
 
     void push_back(Layer* in)
@@ -74,9 +74,9 @@ public: // exposed types :
 
     struct TestNumErr
     {
-        double Err;
+        float_t Err;
         size_t TestOffset;   
-        operator double() const { return Err; }
+        operator float_t() const { return Err; }
     };
 
     struct TrainEpocStatus
@@ -141,7 +141,7 @@ public:
 
 
     template<typename TestIter>
-    inline double Test(TestIter begin, TestIter end, Utils::TopN<TestNumErr>* topNFails = nullptr)
+    inline float_t Test(TestIter begin, TestIter end, Utils::TopN<TestNumErr>* topNFails = nullptr)
     {
         CurrentStatus = Testing;
 
@@ -158,7 +158,7 @@ public:
             auto& out = b->GetOutput();
             NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
             ErrorFunction->Apply(out, iter->Target, ErrFRes);
-            double thisRmse = std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
+            float_t thisRmse = std::accumulate(ErrFRes.begin(), ErrFRes.end(), float_t(0));
             VldnRMSE += thisRmse;
             
             if (topNFails) topNFails->insert({ thisRmse, numTest });
@@ -172,7 +172,7 @@ public:
         
     }
 
-    inline const Vec::Vec2<double>& GetOutputHiLo() const { return back()->GetAct()->MinMax; }
+    inline const Vec::Vec2<float_t>& GetOutputHiLo() const { return back()->GetAct()->MinMax; }
 
     inline void Print(std::string printList, std::ostream &out = Logging::Log)
     {
@@ -226,7 +226,7 @@ public:
             throw std::logic_error("All layers are not linked correctly");
     }
 
-    inline Vec::Vec2<double> Results() {
+    inline Vec::Vec2<float_t> Results() {
         return{ NumValCorrect / NumVal , VldnRMSE / NumVal };
     }
 

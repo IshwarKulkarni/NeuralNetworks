@@ -81,7 +81,7 @@ public:
             for (size_t y = 0; y < Input.size.y; y += Desc.WindowSize.y)
                 for (size_t x = 0; x < Input.size.x; x += Desc.WindowSize.x)
         {
-            double m = -std::numeric_limits<double>::max();
+            float_t m = -std::numeric_limits<float_t>::max();
             Vec::Vec2<unsigned char> mIdx = { 0,0 };
             for (unsigned char dy(0); dy < (unsigned char)(Desc.WindowSize.y); ++dy)
             {

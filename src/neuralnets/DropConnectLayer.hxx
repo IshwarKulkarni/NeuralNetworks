@@ -27,7 +27,7 @@ class Network;
 class DropConnectLayer : public Layer
 {
 public:
-    DropConnectLayer(std::string name, Vec::Size3 size, double dropRate, const Network* nn, Layer* prev) :
+    DropConnectLayer(std::string name, Vec::Size3 size, float_t dropRate, const Network* nn, Layer* prev) :
         Layer("DropConnect-" + name, 
             size() ? size : prev->GetOutput().size,
             size() ? size : prev->GetOutput().size,  
@@ -78,7 +78,7 @@ public:
     }
 private:
 
-    const double DropRate, Scale;
+    const float_t DropRate, Scale;
     SimpleMatrix::Matrix3<bool> Mask;
     const Network* NN;
 };

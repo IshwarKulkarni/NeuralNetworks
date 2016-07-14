@@ -24,7 +24,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "cuda_runtime.h"
 #include "cuda_runtime_api.h"
 #include "SimpleMatrix.hxx"
-#include "utils/CudaUtils.cuh"
+#include "CudaUtils.cuh"
 
 #include <iostream>
 
@@ -83,11 +83,25 @@ namespace CudaSimpleMatrix {
         template<typename Iter>
         void CompareTo(Iter begin, Iter end, const char* msg = "", bool throwErr = true, size_t offset = 0)
         {
-            if (!CudaUtils::DevHostCmp(begin, end, devData) && throwErr)
+            auto res = CudaUtils::DevHostCmp(begin, end, devData, false);
+            if (!res.first)
             {
-                Logging::Log << "\n" << msg << " match failed" << Logging::Log.flush;
+                T d = devData[res.second], h = *(begin + res.second);
+                Logging::Log
+                    << "\n" << msg << " match failed at ("
+                    << res.second%size.x << "," << res.second / size.x << ")"
+                    << ") Device value: " << d << ". Other value:  " << h
+                    << " , D/O - 1 : " << (d/h - 1)
+                    << " , |D-O| : " << std::abs(d-h)
+                    << " > " << std::numeric_limits<T>::epsilon() << std::hex
+                    << " , " << Utils::BitRep<T>(d)() << "-" << Utils::BitRep<T>(h)() 
+                    << std::dec
+                    << "\nDevice matrix: " << *this << "\nOther Matrix : ";
+                SimpleMatrix::Out2d(Logging::Log, &begin, size.x, size.y,"");
+
                 throw std::runtime_error("device and host computation disagree");
             }
+            Logging::Log << "\n" << msg << ".. Macth!";
         }
 
         template <typename U>
@@ -99,17 +113,18 @@ namespace CudaSimpleMatrix {
         T* devData;
         Vec::Size2 size; 
 
-		void Print(std::ostream& o = Logging::Log)
-		{
-			SimpleMatrix::Out2d(o, &devData, size.x, size.y);
-			o.flush();
-		}
-
 	private:
-
 		CudaMatrix() {};
     };
 
+    template<typename T>
+    std::ostream&  operator << (std::ostream& o,const CudaMatrix<T>& mat) 
+    {
+        // will have to enhance this when devData is device-only ptr.
+        SimpleMatrix::Out2d(o, &(mat.devData), mat.size.x, mat.size.y);
+        o.flush();
+        return o;
+    }
 }
 
 #endif

@@ -24,6 +24,15 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include <cstddef>
 #endif
 
+#ifdef CUDA_PROJECT
+#include "cuda_runtime.h"
+#define DEVICE_HOST __device__ __host__
+#else
+#define DEVICE_HOST 
+#endif
+
+#include <initializer_list>
+
 namespace Vec
 {
     template<typename T>
@@ -43,16 +52,15 @@ namespace Vec
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
-
-        inline Vec2(T _x = 0, T _y = 0) : x(_x), y(_y) {}
-
-        operator T*() { return Raw; }
-        inline size_t operator()() const { return x*y; }
-
-        template<typename U> Vec2<T> operator-=(const Vec2<U>& o) { x -= o.x; y -= o.y; return *this; }
-        template<typename U> Vec2<T> operator+=(const Vec2<U>& o) { x += o.x; y += o.y; return *this; }
+        inline DEVICE_HOST Vec2(T _x = 0, T _y = 0) : x(_x), y(_y) {}
         
-        template<typename U> Vec2<T> operator*=(const Vec2<U>& o) { x *= o.x; y *= o.y; return *this; }
+        inline DEVICE_HOST operator T*() { return Raw; }
+        
+        inline DEVICE_HOST size_t operator()() const { return x*y; }
+        
+        template<typename U> Vec2<T> DEVICE_HOST operator-=(const Vec2<U>& o) { x -= o.x; y -= o.y; return *this; }
+        template<typename U> Vec2<T> DEVICE_HOST operator+=(const Vec2<U>& o) { x += o.x; y += o.y; return *this; }
+        template<typename U> Vec2<T> DEVICE_HOST operator*=(const Vec2<U>& o) { x *= o.x; y *= o.y; return *this; }
     };
     
     template<typename T, typename U> Vec2<T> operator*(Vec2<T>& v, U o) { return{ v.x * o,  v.y * o }; }
@@ -84,20 +92,23 @@ namespace Vec
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
-        Vec3(T x_ = 0, T y_ = 0, const T& z_ =0) : x(x_), y(y_), z(z_) {}
-        Vec3(Vec2<T> vec2, T _z = 1) : x(vec2.x), y(vec2.y), z(_z) {}
+        DEVICE_HOST Vec3(T x_ = 0, T y_ = 0, const T& z_ =0) : x(x_), y(y_), z(z_) {}
+        DEVICE_HOST Vec3(Vec2<T> vec2, T _z = 1) : x(vec2.x), y(vec2.y), z(_z) {}
         
-        inline T operator()() const { return x*y*z; }
-        operator T*() { return Raw; }
-        template<typename U> operator Vec2<U>() const { return Vec2<U>(x,y); }
+        DEVICE_HOST inline T operator()() const { return x*y*z; }
 
-        template<typename U> Vec3<T> operator+=(const Vec3<U>& o) { x += o.x, y += o.y, z += o.z; return *this; }
-        template<typename U> Vec3<T> operator*=(const Vec3<U>& o) { x *= o.x, y *= o.y, z *= o.z; return *this; }
+        inline operator std::initializer_list<T>() const {
+            return { x, y, z };
+        }
 
-        template<typename U> Vec2<T> operator+=(const Vec2<U>& o) { x += o.x; y += o.y; return *this; }
-        template<typename U> Vec2<T> operator*=(const Vec2<U>& o) { x *= o.x; y *= o.y; return *this; }
-        template<typename U> Vec2<T> operator/=(const Vec2<U>& o) { x /= o.x; y /= o.y; return *this; }
-        template<typename U> Vec2<T> operator/=(const U& o) { x /= o; y /= o; return *this; }
+        DEVICE_HOST operator T*() { return Raw; }
+        template<typename U> DEVICE_HOST operator Vec2<U>() const { return Vec2<U>(x, y); }
+        template<typename U> Vec3<T> DEVICE_HOST  operator+=(const Vec3<U>& o) { x += o.x, y += o.y, z += o.z; return *this; }
+        template<typename U> Vec3<T> DEVICE_HOST  operator*=(const Vec3<U>& o) { x *= o.x, y *= o.y, z *= o.z; return *this; }
+        template<typename U> Vec2<T> DEVICE_HOST  operator+=(const Vec2<U>& o) { x += o.x; y += o.y; return *this; }
+        template<typename U> Vec2<T> DEVICE_HOST  operator*=(const Vec2<U>& o) { x *= o.x; y *= o.y; return *this; }
+        template<typename U> Vec2<T> DEVICE_HOST  operator/=(const Vec2<U>& o) { x /= o.x; y /= o.y; return *this; }
+        template<typename U> Vec2<T> DEVICE_HOST  operator/=(const U& o) { x /= o; y /= o; return *this; }
     };
 
     typedef Vec3<size_t> Size3;

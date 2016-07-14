@@ -93,7 +93,7 @@ Network::Network(std::string configFile) :
                 const auto& names = StringUtils::Split(nameVals[i].first, ",:", true);
 
                 if (StringUtils::beginsWith(nameVals[i].first, "DropConnect"))
-                    push_back(new DropConnectLayer(names[0], inSize, nvpp.Get<double>(nameVals[i].first)/100, this, b));
+                    push_back(new DropConnectLayer(names[0], inSize, nvpp.Get<float_t>(nameVals[i].first)/100, this, b));
                 else if (names.size() < 2)
                     throw std::runtime_error("Need to have a <LayerName, Activation> in line: "  + nameVals[i].first);
                 else
@@ -204,7 +204,7 @@ Network::Network(std::string configFile) :
             if (!nvpp.IsLastLineRead())
                 throw std::runtime_error("End of file found matching ->EndDropConnect");
 
-            double dropRate = 50; string name = "DropConn"; 
+            float_t dropRate = 50; string name = "DropConn"; 
             Vec::Size3 inSz = b ? b->GetOutput().size : Vec::Size3(0, 0, 0);
             nvpp.Get("DropRate",    dropRate);
             nvpp.Get("Name",        name);
@@ -223,7 +223,7 @@ Network::Network(std::string configFile) :
             string name = "Attenuation";
             Vec::Size3 inSz = b ? b->GetOutput().size : Vec::Size3(0, 0, 0);
             
-            double mean = 0.0, SD = .5;
+            float_t mean = 0.0, SD = .5;
             nvpp.Get("Name", name);
             nvpp.Get("InputSize", inSz);
             nvpp.Get("Mean", mean);

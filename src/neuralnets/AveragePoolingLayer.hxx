@@ -46,28 +46,28 @@ private:
 
 //small windows that average inputs (& add bias) over that window and apply activation 
 // Each average is further multiplied by a weight (same across all windows for a frame)
-struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is weight, second is bias
+struct AveragingKernels : public std::vector<Vec::Vec2<float_t>>  // first is weight, second is bias
 {
      Vec::Size2  WindowSize;
-     const double Scale;
+     const float_t Scale;
     
      inline AveragingKernels(Vec::Size2 inSize, size_t inSizeZ) :
-         std::vector<Vec::Vec2<double>>(inSizeZ),
+         std::vector<Vec::Vec2<float_t>>(inSizeZ),
          WindowSize(inSize),
-         Scale(1./WindowSize())
+         Scale(float_t(1.)/WindowSize())
      {
-         double rs = 1. / sqrt(size());
+         float_t rs = float_t(1./ sqrt(size()));
 
-         if (CNN_DEBUG) std::fill(begin(), end(), Vec::Vec2<double>(.1, .1));
+		 if (CNN_DEBUG) std::fill(begin(), end(), Vec::Vec2<float_t>(float_t(.1), float_t(.1)));
          else 
-             for (auto& d : *this) d = Vec::Vec2<double>(Utils::URand(-rs, rs), Utils::URand(-rs, rs));
+             for (auto& d : *this) d = Vec::Vec2<float_t>(Utils::URand(-rs, rs), Utils::URand(-rs, rs));
      }
 
     inline void Apply(Volume& in, const Activation* act, Volume out, Volume LGrads) 
     {
         for3d(out.size)
         {
-            double res = 0;
+            float_t res = 0;
             for (size_t wy = 0; wy < WindowSize.y; ++wy)
                 for (size_t wx = 0; wx < WindowSize.x; ++wx)
                     res += in.at(z, y*WindowSize.y + wy, x*WindowSize.x + wx);
@@ -77,7 +77,7 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is wei
         }
     }
 
-    inline void BackwardPass(Volume grads, const Volume& inputs, Volume& pgrads, double eta)
+    inline void BackwardPass(Volume grads, const Volume& inputs, Volume& pgrads, float_t eta)
     {
         GetPGrads(grads, pgrads), ChangeWeights(grads, inputs, eta);
     }
@@ -86,22 +86,22 @@ struct AveragingKernels : public std::vector<Vec::Vec2<double>>  // first is wei
     {
         for3d(grads.size)
         {
-            double pg = Scale * grads.at(z, y, x) * at(z).x;
+            float_t pg = Scale * grads.at(z, y, x) * at(z).x;
             for (size_t wy = 0; wy < WindowSize.y; ++wy)
                 for (size_t wx = 0; wx < WindowSize.x; ++wx)
                     pgrads.at(z, y*WindowSize.y + wy, x*WindowSize.x + wx) = pg;
         }
     }
 
-    inline void ChangeWeights(Volume grads, const Volume& ipt, double eta)
+    inline void ChangeWeights(Volume grads, const Volume& ipt, float_t eta)
     {
-        std::vector<Vec::Vec2<double>> dW(grads.size.z);
+        std::vector<Vec::Vec2<float_t>> dW(grads.size.z);
         for (size_t z = 0; z < grads.size.z; ++z)
         {
-            double diff = 0;
+            float_t diff = 0;
             for2d(grads.size)
             {
-                double g = grads.at(z, y, x);
+                float_t g = grads.at(z, y, x);
                 for (size_t wy = 0; wy < WindowSize.y; ++wy)
                     for (size_t wx = 0; wx < WindowSize.x; ++wx)
                         diff += g * ipt.at(z, y*WindowSize.y + wy, x*WindowSize.x + wx);

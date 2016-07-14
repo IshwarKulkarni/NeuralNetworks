@@ -34,7 +34,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #endif
 
 DEVICE_
-double inline SigmoidActivation(double p, double& grad)
+float_t inline SigmoidActivation(float_t p, float_t& grad)
 {
     p = 1.f / (1.f + exp(-p));
     grad = p * (1 - p);
@@ -42,7 +42,7 @@ double inline SigmoidActivation(double p, double& grad)
 }
 
 DEVICE_
-double inline TanHActivation(double p, double& grad) 
+float_t inline TanHActivation(float_t p, float_t& grad) 
 {
     p = tanh(p);
     grad = 1 - p*p;
@@ -50,7 +50,7 @@ double inline TanHActivation(double p, double& grad)
 }
 
 DEVICE_
-double inline RELUActivation(double p, double& grad)
+float_t inline RELUActivation(float_t p, float_t& grad)
 {
     if (p > 0) grad = 1;
     else grad = p = 0;
@@ -58,8 +58,8 @@ double inline RELUActivation(double p, double& grad)
 }
 
 
-typedef double(*ActivationFunction)(double p, double& grad);
-typedef bool(*ResultCmpPredicateType)(double p1, double p2);
+typedef float_t(*ActivationFunction)(float_t p, float_t& grad);
+typedef bool(*ResultCmpPredicateType)(float_t p1, float_t p2);
 
 enum ActivationId
 {
@@ -74,12 +74,12 @@ struct Activation
     std::string Name;
     ActivationFunction Function;
     ResultCmpPredicateType ResultCmpPredicate;
-    double Eta;
-    Vec::Vec2<double> MinMax;
+    float_t Eta;
+    Vec::Vec2<float_t> MinMax;
 };
 
 
-DEVICE_ inline double Activate(ActivationId activationId, double p) // redesign this
+DEVICE_ inline float_t Activate(ActivationId activationId, float_t p) // redesign this
 {
     if (activationId == SigmoidActivationId)  return 1.f / (1.f + exp(-p));
     if (activationId == TanHActivationId)	  return tanh(p);
@@ -88,23 +88,23 @@ DEVICE_ inline double Activate(ActivationId activationId, double p) // redesign 
 		return -1;
 }
 
-DEVICE_ inline double ActivatePrime(ActivationId activationId, double p) // redesign this
+DEVICE_ inline float_t ActivatePrime(ActivationId activationId, float_t p) // redesign this
 {
-    if (activationId == SigmoidActivationId)  return p * (1 - p);
-    if (activationId == TanHActivationId)	  return 1 - p*p;
-    if (activationId == RELUActivationId)	  return (p > 0 ? 1 : 0);
+    if (activationId == SigmoidActivationId)  return float_t(p * (1 - p));
+    if (activationId == TanHActivationId)	  return float_t(1 - p*p);
+    if (activationId == RELUActivationId)	  return float_t((p > 0 ? 1 : 0));
     else
         return -1;
 }
 
 
 static Activation List[] = {
-	{ SigmoidActivationId,	"Sigmoid",	SigmoidActivation,  Utils::RoundedCompare, 0.01, { 0, 1 } },
-	{ TanHActivationId,		"TanH",		TanHActivation,		Utils::SameSign,       0.01, { -.9, .9 } },
-	{ RELUActivationId,		"RELU",		RELUActivation,		Utils::RoundedCompare, 0.01, { 0.1, .9 } },
+	{ SigmoidActivationId,	"Sigmoid",	SigmoidActivation,  Utils::RoundedCompare, float_t(0.01), { float_t(  0), float_t( 1) } },
+	{ TanHActivationId,		"TanH",		TanHActivation,		Utils::SameSign,       float_t(0.01), { float_t(-.9), float_t(.9) } },
+	{ RELUActivationId,		"RELU",		RELUActivation,		Utils::RoundedCompare, float_t(0.01), { float_t(0.1), float_t(.9) } },
 };
 
-inline double GetEta(ActivationId activationId)
+inline float_t GetEta(ActivationId activationId)
 {
 	for (unsigned i = 0; i < ARRAY_LENGTH(List); ++i)
 		if (List[i].Id == activationId) return List[i].Eta;
@@ -112,7 +112,7 @@ inline double GetEta(ActivationId activationId)
 	return -1;
 }
 
-inline void MultiplyEta(double etaMul)
+inline void MultiplyEta(float_t etaMul)
 {
     for (unsigned i = 0; i < ARRAY_LENGTH(List); ++i)
         List[i].Eta *= etaMul;

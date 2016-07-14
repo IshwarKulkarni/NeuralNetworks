@@ -168,7 +168,7 @@ namespace SimpleMatrix
         template<typename U>
         T DotAt(Vec::Loc loc, const Matrix<U>& kernel) const
         {
-            Vec::Size3 middle = kernel.size / 2; middle.z = 0;
+            Vec::Size3 middle = kernel.size / 2;
 
             Vec::Vec2<int> start(loc.x - middle.x, loc.y - middle.y);
             Vec::Vec2<int>   end(start.x + kernel.size.x, start.y + kernel.size.y);
@@ -490,7 +490,7 @@ namespace SimpleMatrix
 
     template<typename T>
     inline std::ostream& operator<<(std::ostream& out, const Matrix<T>& k) {
-        Out2d(out, k.data, k.size.w, k.size.h, "", 9);
+        Out2d(out, k.data, k.size.w, k.size.h);
         //OutCSV(out, k, "");
         return out;
     }

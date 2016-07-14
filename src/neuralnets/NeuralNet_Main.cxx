@@ -32,13 +32,13 @@ using namespace std::chrono;
 struct NeuralNetRunParams_t
 {
     string DataLoc, ConfigFile;
-    double  VldnFrac, TestFrac;
+    float_t  VldnFrac, TestFrac;
 
     unsigned NumSamples, MaxEpocs, TargetAcc, RunTest, TopNFailIms;
 
     NeuralNetRunParams_t() :
         DataLoc(DATA_LOCATION), ConfigFile("test1.config"),
-        VldnFrac(0.05), TestFrac(0.05), NumSamples(10), MaxEpocs(4), TargetAcc(98),
+		VldnFrac(float_t(0.05)), TestFrac(float_t(0.05)), NumSamples(10), MaxEpocs(4), TargetAcc(98),
         RunTest(1), TopNFailIms(0)
     {
         GLOBAL_OF_TYPE_WNAME(NumSamples);
@@ -64,11 +64,11 @@ void statusMonitor(const Network* nn, bool& monitor)
 
         auto nextCheck = system_clock::now() + milliseconds(400);
 
-        auto done = (100. * stat->SamplesDone) / stat->NumTrainInEpoc,
-            passRate = (100. * stat->LastPasses.count()) / stat->PassWinSize,
-            cumPassRate = double(stat->TotNumPasses) / double(stat->SamplesDone),
+        auto done =  float_t(100 * stat->SamplesDone) / stat->NumTrainInEpoc,
+			passRate = float_t(100 * stat->LastPasses.count()) / stat->PassWinSize,
+            cumPassRate = float_t(stat->TotNumPasses) / float_t(stat->SamplesDone),
             timeSpent = Utils::TimeSince(stat->TrainStart),
-            imRate = double(stat->SamplesDone) / timeSpent;
+            imRate = float_t(stat->SamplesDone) / timeSpent;
 
         cout
             << setw(4) << setprecision(4)
@@ -88,10 +88,9 @@ void statusMonitor(const Network* nn, bool& monitor)
 
 int main(int argc, char** argv)
 {
-	
     NameValuePairParser::MakeGlobalNVPP(argc, argv);
 
-   NeuralNetRunParams_t rParam;
+    NeuralNetRunParams_t rParam;
 
     cout << "\nBuilding network & data... ";
     Network nn(rParam.DataLoc + rParam.ConfigFile);
@@ -106,15 +105,12 @@ int main(int argc, char** argv)
     Timer  epochTime("ClassifierTime");
 
     auto monitor = true; std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
-#ifndef _DEBUG
-   
-#endif 
 	
     for (size_t epoch = 0; epoch < rParam.MaxEpocs; ++epoch)
     {
         epochTime.TimeFromLastCheck();
         nn.Train(data.TrainBegin(), data.TrainEnd());
-        double lastCheck = epochTime.TimeFromLastCheck();
+        float_t lastCheck = epochTime.TimeFromLastCheck();
 
         nn.Test(data.VldnBegin(), data.VldnEnd());
 
@@ -132,9 +128,8 @@ int main(int argc, char** argv)
 
     if (rParam.RunTest)
     {
-        Utils::TopN<Network::TestNumErr>* topNFails = nullptr;
-        if (rParam.TopNFailIms)
-            topNFails = new Utils::TopN<Network::TestNumErr>(rParam.TopNFailIms);
+        auto topNFails = rParam.TopNFailIms ? new Utils::TopN<Network::TestNumErr>(rParam.TopNFailIms) 
+                        : nullptr;
 
         cout << "\nRunning test.. ";
         nn.Test(data.TestBegin(), data.TestEnd(), topNFails);
@@ -155,6 +150,7 @@ int main(int argc, char** argv)
     }
 
     data.Clear();
+	std::cout << "Prensa 'entrada' para salida!";
     cin.get();
     return 0;
 }

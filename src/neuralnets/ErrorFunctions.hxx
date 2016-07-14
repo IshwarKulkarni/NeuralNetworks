@@ -24,12 +24,12 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #include "utils/SimpleMatrix.hxx"
 #include "memory"
 
-typedef SimpleMatrix::Matrix3<double> Volume;
-typedef SimpleMatrix::Matrix<double> Frame;
+typedef SimpleMatrix::Matrix3<float_t> Volume;
+typedef SimpleMatrix::Matrix<float_t> Frame;
 
 struct ErrorFunctionType {
-    virtual void Prime(const Volume& out, const double* target, Volume& res) const {};
-    virtual void Apply(const Volume& out, const double* target, Volume& res) const {};
+    virtual void Prime(const Volume& out, const float_t* target, Volume& res) const {};
+    virtual void Apply(const Volume& out, const float_t* target, Volume& res) const {};
     virtual std::string Name() const { return ""; };
 };
 
@@ -37,17 +37,17 @@ struct MeanSquareErrorType : public ErrorFunctionType
 {
     virtual std::string Name() const override { return "MeanSquareError"; };
 
-    virtual inline void Prime(const Volume& out, const double* target, Volume& res) const override
+    virtual inline void Prime(const Volume& out, const float_t* target, Volume& res) const override
     {
         for (size_t i = 0; i < out.size(); ++i)
             res[i] = out[i] - target[i];
     }
-    virtual inline void Apply(const Volume& out, const double* target, Volume& res) const override
+    virtual inline void Apply(const Volume& out, const float_t* target, Volume& res) const override
     {
         for (size_t i = 0; i < out.size(); ++i)
         {
-            double r = target[i] - out[i];
-            res[i] = 0.5 * r*r;
+            float_t r = target[i] - out[i];
+            res[i] = float_t( 0.5 * r*r );
         }
     }
 };
@@ -57,16 +57,16 @@ struct CrossEntropyType  : ErrorFunctionType{
 public:
     virtual std::string Name() const override { return "CrossEntropyError"; };
 
-    virtual inline void Prime(const Volume& out, const double* target, Volume& res) const override
+    virtual inline void Prime(const Volume& out, const float_t* target, Volume& res) const override
     {
         for (size_t i = 0; i < out.size(); ++i)
-            res[i] = (out[i] - target[i]) / (out[i] * (1. - target[i]));            
+            res[i] =float_t( (out[i] - target[i]) / (out[i] * (1. - target[i])));
     }
 
-    inline void  Apply(const Volume& out, const double* target, Volume& res) const override
+    inline void  Apply(const Volume& out, const float_t* target, Volume& res) const override
     {
         for (size_t i = 0; i < out.size(); ++i)
-            res[i] = -target[i] * std::log(out[i]) - (1. - target[i]) * std::log(1. - out[i]);
+            res[i] =  float_t( -target[i] * std::log(out[i]) - (1. - target[i]) * std::log(1. - out[i]));
     }
 };
 

@@ -37,7 +37,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #define NN_DEBUG 0
 #endif
 
-typedef std::vector<double> Row;
+typedef std::vector<float_t> Row;
 
 struct Neuron
 {
@@ -45,23 +45,23 @@ struct Neuron
 
     inline void InitWeights()
     {
-        double rs = double(1 / sqrt(Weights.size()));
+        float_t rs = float_t(1 / sqrt(Weights.size()));
         for (auto& w : Weights)
-            w = NN_DEBUG ? 0.1 : Utils::URand(rs, -rs);
+            w = NN_DEBUG ? float_t(0.1) : Utils::URand(rs, -rs);
     }
 
     template<typename IpArr>
-    double ForwardPass(IpArr& ip, const Activation* Act, double& localGradient) {
-        double out = Weights.back();
+    float_t ForwardPass(IpArr& ip, const Activation* Act, float_t& localGradient) {
+        float_t out = Weights.back();
         for (size_t i = 0; i < Weights.size() - 1; ++i)
             out += (Weights[i] * (ip[i]));
         return  Act->Function(out, localGradient);
     }
 
-    inline double operator[](unsigned wIdx)  const { return Weights[wIdx]; }
+    inline float_t operator[](unsigned wIdx)  const { return Weights[wIdx]; }
     inline size_t NumWeights() const { return Weights.size() - 1; }
     
-    inline void BackwardPass(double eta, double grad, Volume& pgrads, const Volume& inputs)
+    inline void BackwardPass(float_t eta, float_t grad, Volume& pgrads, const Volume& inputs)
     {
         for (size_t i = 0; i < Weights.size() - 1; ++i)
             pgrads[i] += Weights[i] * grad;
@@ -69,7 +69,7 @@ struct Neuron
         ChangeWeights(eta, grad, inputs);
     }
 
-    void ChangeWeights(double eta, double grad, const Volume& inputs)
+    void ChangeWeights(float_t eta, float_t grad, const Volume& inputs)
     {
         dWeights.assign(dWeights.size(), 0.0);
         for (unsigned i = 0; i < Weights.size() - 1; ++i)
@@ -91,12 +91,13 @@ struct Neuron
         return stream;
     }
 #ifdef CUDA_PROJECT
-   void Compare(double* dev) {
-       if (!CudaUtils::DevHostCmp(Weights.begin(), Weights.end(), dev))
+   void Compare(float_t* dev) {
+       if (!CudaUtils::DevHostCmp(Weights.begin(), Weights.end(), dev).first)
            throw std::runtime_error("Comp failed");
    }
 
-   double* CopyWeights(double* dev)
+   template <typename OutT>
+   OutT* Copy(OutT* dev)
    {
 	   return std::copy(Weights.begin(), Weights.end(), dev);
    }
@@ -126,8 +127,8 @@ public:
         
         for (auto& n : Neurons) n.InitWeights();
 #ifdef CUDA_PROJECT
-		double* dev = CudaNeurons.Weights.devData;
-		for (auto& n : Neurons) dev = n.CopyWeights(dev);
+		float_t* dev = CudaNeurons.Weights.devData;
+		for (auto& n : Neurons) dev = n.Copy(dev);
 #endif
     }
 
@@ -137,7 +138,7 @@ public:
             Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
 #ifdef CUDA_PROJECT
-		CudaNeurons.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "\nFCOp");
+		CudaNeurons.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "FCOp");
 #endif
         if (Next) Next->ForwardPass();
     }

@@ -38,9 +38,18 @@
     <ClInclude Include="..\..\src\utils\CudaUtils.cuh">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\CudaLayers.cuh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\neuralnets\ConvolutionLayer.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\..\src\neuralnets\Cuda_FullyConnectedLayer.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\neuralnets\Cuda_ConvolutionLayer.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

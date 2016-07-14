@@ -22,6 +22,10 @@ FITNESS FOR A PARTICULAR PURPOSE.
 
 #include "Layer.hxx"
 
+#ifdef CUDA_PROJECT
+#include "CudaLayers.cuh"
+#endif
+
 struct ConvLayerDesc
 {
     std::string Name;
@@ -63,7 +67,7 @@ template<bool PConnected>
 struct Kernel : public Volume
 {
     const Vec::Size2 Stride;  // when stride is 1, max overlap; i.e. windows moves 1pixel 
-    double Bias;
+    float_t Bias;
     const bool Padded;
     const Vec::Loc CStart, CEnd, PadSize;
     
@@ -75,10 +79,10 @@ struct Kernel : public Volume
         CEnd(Padded ? ipSize.x : ipSize.x - size.x/2, Padded ? ipSize.y : ipSize.y - size.y/2),
         PadSize(Padded ? size / 2 : Vec::Size3())
     {
-        double rs = 1. / sqrt(size());
+        float_t rs = float_t(1. / sqrt(size()));
 
-        Bias = CNN_DEBUG ? 0.1 : Utils::URand(-rs, rs);
-        for (auto& d : *this) d = CNN_DEBUG ? 0.1 : Utils::URand(-rs, rs);
+		Bias = CNN_DEBUG ? float_t(0.1) : Utils::URand(-rs, rs);
+		for (auto& d : *this) d = CNN_DEBUG ? float_t(0.1) : Utils::URand(-rs, rs);
     }
 
     inline void Apply(const Volume& IpImage, const Activation* act, Frame Output, Frame LGrads, bool* connection)
@@ -89,7 +93,7 @@ struct Kernel : public Volume
                 Output.at(oy, ox) = act->Function(IpImage.DotAt<PConnected>({ x,y }, *this, connection) + Bias, LGrads.at(oy, ox));
     }
 
-    inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, Volume& dW, double eta, bool* conn)
+    inline void BackwardPass(Frame gradients, const Volume& inputs, Volume& pgrads, Volume& dW, float_t eta, bool* conn)
     {
         GetPGrads(gradients, pgrads, conn);
         ChangeWeights(gradients, inputs, dW, eta, conn);
@@ -106,17 +110,16 @@ struct Kernel : public Volume
                 s.x = MAX(0, s.x), e.x = MIN(int(pgrads.Width()), e.x);
                 s.y = MAX(0, s.y), e.y = MIN(int(pgrads.Height()), e.y);
 
-                double grad = gradients.at(gy, gx);
+                float_t grad = gradients.at(gy, gx);
                 for (size_t z = s.z; z < size_t(e.z); ++z)
                     if (!PConnected || connection[z])
                         for (size_t y = s.y; y < size_t(e.y); ++y)
                             for (size_t x = s.x; x < size_t(e.x); ++x)
                                 pgrads.at(z, y, x) += grad * at(z, y - is.y, x - is.x);
-
             }
     }
 
-    inline void ChangeWeights(Frame grads, const Volume& ipt, Volume& dW, double eta, bool* connection)
+    inline void ChangeWeights(Frame grads, const Volume& ipt, Volume& dW, float_t eta, bool* connection)
     {
         dW.Fill(0.);
         for (size_t z = 0; z < size.z; ++z)
@@ -128,12 +131,12 @@ struct Kernel : public Volume
         for3d(size)
             at(z, y, x) -= eta* dW.at(z, y, x);
 
-        double dB = 0;
+        float_t dB = 0;
         for (auto& g : grads)dB += g;
         Bias -= eta * dB;
     }
 
-    static inline Vec::Size3 GetOpSize2(const ConvLayerDesc& desc, class Layer* prev) 
+    static inline Vec::Size3 GetOpSize3(const ConvLayerDesc& desc, class Layer* prev) 
     {
         Vec::Size3 inSz = prev ? prev->GetOutput().size : desc.IpSize, stride = desc.KernelStride;
         
@@ -144,7 +147,7 @@ struct Kernel : public Volume
 
     std::ostream& Print(std::ostream& stream)
     {
-        //double sum = 0; for (auto& w : *this) sum += w;
+        //float_t sum = 0; for (auto& w : *this) sum += w;
         stream 
             << " |  Stride: " << Stride
             << " | Bias: " << Bias
@@ -153,12 +156,19 @@ struct Kernel : public Volume
 
         return stream;
     }
+    
+    template<typename OutT>
+    OutT Copy(OutT out)
+    {
+        (*std::copy(this->begin(), this->end(), out)) = Bias;
+        return ++out;
+    }
 };
 
 class ConvolutionLayerBase : public Layer {
 protected:
     ConvolutionLayerBase(const ConvLayerDesc& desc, Layer* prev = 0) :
-        Layer("ConvLayer-" + desc.Name, desc.IpSize, Kernel<true>::GetOpSize2(desc, prev), desc.Activation, prev) {}
+        Layer("ConvLayer-" + desc.Name, desc.IpSize, Kernel<true>::GetOpSize3(desc, prev), desc.Activation, prev) {}
 };
 
 template<bool PartiallyConnected>
@@ -169,6 +179,11 @@ public:
     ConvolutionLayer(const ConvLayerDesc& desc, SimpleMatrix::Matrix<bool>& connTable, Layer* prev = 0) :
         ConvolutionLayerBase(desc, prev),
         ConnTable(connTable.Copy())
+#ifdef CUDA_PROJECT
+        , CudaLayer(
+            {desc.KernelSize.x, desc.KernelSize.y, Input.size.z}, 
+            desc.NumberOfKernels, Input.size, Output.size, desc.KernelStride, Act->Id )
+#endif
     {
         if (PartiallyConnected && !ConnTable.size())
             throw std::invalid_argument("Cannot have Partially connected convolution layer with no connection table.");
@@ -187,6 +202,11 @@ public:
             Kernels.push_back(Kernel<PartiallyConnected>(desc, Layer::GetInput().size));
             dW.push_back(Volume(Kernels.back().size));
         }
+
+#ifdef CUDA_PROJECT
+        float_t* dev = CudaLayer.Kernels.devData;
+        for (auto& k : Kernels) dev = k.Copy(dev);
+#endif
     }
 
     virtual void ForwardPass()
@@ -194,6 +214,9 @@ public:
         for (unsigned i = 0; i < Kernels.size(); ++i)
             Kernels[i].Apply(Input, Act, Output(i), LGrads(i), PartiallyConnected ? ConnTable.data[i] : nullptr);
 
+#ifdef CUDA_PROJECT
+        CudaLayer.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "ConvLayer OP");
+#endif
         if (Next) Next->ForwardPass();
     }
 
@@ -252,6 +275,9 @@ public:
 private:
     std::vector<Kernel<PartiallyConnected>>  Kernels;
     std::vector<Volume> dW;
+#ifdef CUDA_PROJECT
+	CudaConvolutionLayer CudaLayer;
+#endif
 };
 
 #endif

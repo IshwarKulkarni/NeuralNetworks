@@ -28,7 +28,7 @@ class Network;
 class AttenuationLayer : public Layer
 {
 public:
-    AttenuationLayer(std::string name, Vec::Size3 size, double mean, double sd, const Network* nn, Layer* prev) :
+    AttenuationLayer(std::string name, Vec::Size3 size, float_t mean, float_t sd, const Network* nn, Layer* prev) :
         Layer("AttenuationLayer-" + name,
             size() ? size : prev->GetOutput().size,
             size() ? size : prev->GetOutput().size,
@@ -78,8 +78,8 @@ public:
     virtual ~AttenuationLayer() {}
 private:
     std::default_random_engine generator;
-    std::normal_distribution<double> distribution;
-    const double Mean, SD;
+    std::normal_distribution<float_t> distribution;
+    const float_t Mean, SD;
 
     const Network* NN;
 };

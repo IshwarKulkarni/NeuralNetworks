@@ -9,7 +9,7 @@ If you so desire, you can copy, redistribute and/or modify this source
 along with  rest of the project. However any copy/redistribution,
 including but not limited to compilation to binaries, must carry
 this header in its entirety. A note must be made about the origin
-of your copy.
+of your copy.NYSE:TZF.CL
 
 NeuralNetwork is being distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,15 +20,17 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #ifndef _CUDA_UTILS_INCLUDED_
 #define _CUDA_UTILS_INCLUDED_
 
+#include "Utils.hxx"
+
 #define CUDA_CHECK(Err) if((Err) != cudaSuccess) { \
     std::cerr << "\nCuda error at " << __FUNCTION__ << " " << __FILE__ << "(" << __LINE__ << "): "  \
               << cudaGetErrorString(cudaGetLastError()); \
-    throw std::runtime_error( std::string("Cuda Error ") + cudaGetErrorString(cudaGetLastError()));\
+    throw std::runtime_error( std::string("Cuda Error ") );\
 } 
 
-#define CUDA_CHECK_ERR  { cudaError_t err = cudaGetLastError();  CUDA_CHECK(err); }
+#define CUDA_CHECK_ERR  { CUDA_CHECK(cudaPeekAtLastError()); }
 
-#define CUDA_CHECK_SYNCH  cudaDeviceSynchronize(); CUDA_CHECK_ERR  
+#define CUDA_CHECK_SYNCH  {cudaDeviceSynchronize(); CUDA_CHECK_ERR;}
 	
 #define CUDA_CHECK_FREE(ptr)  CUDA_CHECK(cudaFree(ptr));
 
@@ -56,23 +58,28 @@ namespace CudaUtils
         v++;
         return v;
     }
-    
+
+    __device__ inline size_t Lin2(const Vec::Size3& s) { return s.x*s.y; }
+
+    __device__ inline size_t LinOffset(const Vec::Size2& s, const Vec::Size3& v) { return v.z * s.x * s.y + v.y * s.x + v.x; }
+
     template<typename T, typename Iter> 
-    bool DevHostCmp(Iter begin, Iter end, T* devData)
+    std::pair<bool, size_t> DevHostCmp(Iter begin, Iter end, T* devData, bool print = true)
     {
-        struct { bool operator()(double a, double b){return abs(a - b) < (10e-12); }} cmp;            
-       
-        if (!std::equal(begin, end, devData, cmp))
+        auto m = std::mismatch(begin, end, devData, Utils::BitCompare<T,4>);
+        auto dist = std::distance(begin, end);
+        
+        if (m.first != end || m.second != devData + dist)
         {
-            Logging::Log << setprecision(9);
-            auto dist = std::distance(begin, end);
-            Utils::PrintLinear(Logging::Log, begin, dist, "\nHost:  \t");
-            Utils::PrintLinear(Logging::Log, devData, dist, "\nDevice:\t");
-            Logging::Log << Logging::Log.flush;
-            return false;
+            if (print) {
+                Logging::Log << setprecision(9);
+                Utils::PrintLinear(Logging::Log, begin, dist, "\nHost:  \t");
+                Utils::PrintLinear(Logging::Log, devData, dist, "\nDevice:\t");
+                Logging::Log << Logging::Log.flush;
+            }
+            return make_pair(false, std::distance(begin, m.first));
         }
-        //Logging::Log << " match\n" << Logging::Log.flush;
-        return true;
+        return make_pair(true, 0);
     }
 
 	struct KernelLaunchParams
@@ -83,29 +90,38 @@ namespace CudaUtils
 
 	inline int size_of(dim3 d) { return d.x*d.y*d.z; }
 
-	struct LaunchChecker
+    struct LaunchChecker
 	{
 		static bool Check(KernelLaunchParams& klp)
 		{
 			static LaunchChecker stChecker;
 			return
-				stChecker.props.sharedMemPerBlock >= klp.BlockSharedMemSize &&
+				LaunchChecker::GetProps().sharedMemPerBlock >= klp.BlockSharedMemSize &&
+				LaunchChecker::GetProps().maxThreadsPerBlock >= size_of(klp.BlockSize) &&
+				LaunchChecker::GetProps().maxGridSize[0] >= int(klp.GridSize.x) &&
+				LaunchChecker::GetProps().maxGridSize[1] >= int(klp.GridSize.y) &&
+				LaunchChecker::GetProps().maxGridSize[2] >= int(klp.GridSize.z) &&
+				LaunchChecker::GetProps().maxThreadsDim[0] >= int(klp.BlockSize.x) &&
+				LaunchChecker::GetProps().maxThreadsDim[1] >= int(klp.BlockSize.y) &&
+				LaunchChecker::GetProps().maxThreadsDim[2] >= int(klp.BlockSize.z);
+		}
 
-				stChecker.props.maxThreadsPerBlock >= size_of(klp.BlockSize) &&
-
-				stChecker.props.maxGridSize[0] >= int(klp.GridSize.x) &&
-				stChecker.props.maxGridSize[1] >= int(klp.GridSize.y) &&
-				stChecker.props.maxGridSize[2] >= int(klp.GridSize.z) &&
-				stChecker.props.maxThreadsDim[0] >= int(klp.BlockSize.x) &&
-				stChecker.props.maxThreadsDim[1] >= int(klp.BlockSize.y) &&
-				stChecker.props.maxThreadsDim[2] >= int(klp.BlockSize.z);
+		static bool ConstCheck(unsigned constSize)
+		{
+			static LaunchChecker stChecker;
+			return LaunchChecker::GetProps().totalConstMem >= constSize;
 		}
 	private:
+		
 		LaunchChecker()
 		{
-			cudaGetDeviceProperties(&props, CUDA_DEVICE_NUM);
+			cudaGetDeviceProperties(&LaunchChecker::GetProps(), CUDA_DEVICE_NUM);
 		}
-		cudaDeviceProp props;
+
+		static cudaDeviceProp& GetProps() {
+			static cudaDeviceProp  props; return props;
+		}
 	};
 }
 #endif 
+

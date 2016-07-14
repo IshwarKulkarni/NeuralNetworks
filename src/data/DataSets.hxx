@@ -37,13 +37,13 @@ struct TargetPatternDef
         UseNone
     };
 
-    double      FillHigh, FillLow;
+    float_t      FillHigh, FillLow;
     unsigned    NumTargetClasses;
     unsigned    TargetVectorSize;
     TargetOutputType TargetType;
 
     TargetPatternDef(unsigned numTargetClasses = 0, TargetOutputType type = UseBinaryArray, 
-        double fillLo = 0, double fillHi = 1) :
+        float_t fillLo = 0, float_t fillHi = 1) :
         FillHigh(fillHi),
         FillLow(fillLo),
         NumTargetClasses(numTargetClasses),
@@ -51,14 +51,14 @@ struct TargetPatternDef
         TargetType(type){}
 };
 
-struct Char255ToDoubleVolume {
-    inline void operator()(unsigned char*** in, SimpleMatrix::Matrix3<double>& out) {
+struct Char255Tofloat_tVolume {
+    inline void operator()(unsigned char*** in, SimpleMatrix::Matrix3<float_t>& out) {
         auto inLin = in[0][0];
-        for (auto& o : out) o = double(*inLin++) /255;
+        for (auto& o : out) o = float_t(*inLin++) /255;
     }
 };
 
-template<typename TI, typename ConverterType = Char255ToDoubleVolume > // First type should have [] operator, second 
+template<typename TI, typename ConverterType = Char255Tofloat_tVolume > // First type should have [] operator, second 
 class PatternSet
 {
     struct Pattern
@@ -67,8 +67,8 @@ class PatternSet
         TI Input;
         // Copy of following function exists in each Pattern object, 
         // but I don't know how get rid of it cleanly.
-        void GetInput(SimpleMatrix::Matrix3<double>& V) { Converter(Input, V); }
-        double* Target;
+        void GetInput(SimpleMatrix::Matrix3<float_t>& V) { Converter(Input, V); }
+        float_t* Target;
     };
     
     /* 
@@ -77,7 +77,7 @@ class PatternSet
     */
 public:
 
-    inline PatternSet(unsigned dataSize, double validationFraction, double testFraction,
+    inline PatternSet(unsigned dataSize, float_t validationFraction, float_t testFraction,
         TargetPatternDef& tgtPtrn) :
         DataSize(dataSize),
         TestSetsize(unsigned(dataSize * testFraction)),
@@ -101,14 +101,14 @@ public:
         TgtPtrnDef = tgtPtrn;
     }
 
-    inline void ResetHighLow(double low, double high)
+    inline void ResetHighLow(float_t low, float_t high)
     {
         for (unsigned i = 0; i < TgtPtrnDef.NumTargetClasses; i++)
             for (unsigned j = 0; j < TgtPtrnDef.TargetVectorSize; ++j)
                 Targets[i][j] = (Targets[i][j] == TgtPtrnDef.FillHigh ? high : low);
     }
 
-    inline void Redistribute(unsigned dataSize, double testFraction, double validationFraction)
+    inline void Redistribute(unsigned dataSize, float_t testFraction, float_t validationFraction)
     {
         if (testFraction + validationFraction > 1.0)
             throw std::logic_error("Invalid test and validation fractions: "
@@ -141,7 +141,7 @@ public:
     inline Pattern& operator[](size_t idx)        { return Patterns[idx]; }
     inline std::vector<Pattern>& GetPatterns()    { return Patterns;      }
 
-    inline double* GetTarget(unsigned u) { return Targets[u]; }
+    inline float_t* GetTarget(unsigned u) { return Targets[u]; }
 
     inline void Summarize(std::ostream& out, bool printAllDistributions = true)
     {
@@ -196,7 +196,7 @@ public:
 
         std::vector<unsigned> dist(TgtPtrnDef.NumTargetClasses);
 
-        auto BinaryToInt = [&](double* Tgt) {
+        auto BinaryToInt = [&](float_t* Tgt) {
             unsigned a = 0;
             for (int i = 0, b = 1; i < patternSize; ++i, b *= 2)
                 if (Tgt[i] == TgtPtrnDef.FillHigh)
@@ -204,7 +204,7 @@ public:
             return a;
         };
 
-        auto UnaryToInt = [&](double* Tgt) {
+        auto UnaryToInt = [&](float_t* Tgt) {
             for (int i = 0; i < patternSize; ++i)
                 if (Tgt[i] == TgtPtrnDef.FillHigh) return i;
             return 0;
@@ -233,7 +233,7 @@ public:
     
 private:
     unsigned DataSize, TestSetsize, VldnSize, TrainSize;
-    double**     Targets;
+    float_t**     Targets;
     std::vector<TI>         DataToDelete;
     std::vector<Pattern>    Patterns;
     TargetPatternDef        TgtPtrnDef;
@@ -243,11 +243,11 @@ private:
 
 extern void  ReadDataSplitsFromFile();
 
-Vec::Vec2<double> SetVldnTestFractions(double vldn, double test);
+Vec::Vec2<float_t> SetVldnTestFractions(float_t vldn, float_t test);
 
-PatternSet<double*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize); // one dimension output
+PatternSet<float_t*> LoadMnistData(unsigned& InputSize, unsigned& OutputSize); // one dimension output
 
-PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = MNISTReader::NumImages + MNISTReader::NumTestImages);
+PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<float_t> highlo, unsigned N = MNISTReader::NumImages + MNISTReader::NumTestImages);
 
-PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<double> highlo, unsigned N = CIFAR::NumImages);
+PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& insize, unsigned& outsize, Vec::Vec2<float_t> highlo, unsigned N = CIFAR::NumImages);
 #endif

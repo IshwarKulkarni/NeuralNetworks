@@ -30,20 +30,20 @@ using namespace Vec;
 using namespace SimpleMatrix;
 using namespace CIFAR;
 
-double VldnFraction = 0.05f;
-double TestFraction = 0.05f;
+float_t VldnFraction = 0.05f;
+float_t TestFraction = 0.05f;
 
-Vec2<double> SetVldnTestFractions(double vldn, double test)
+Vec2<float_t> SetVldnTestFractions(float_t vldn, float_t test)
 {
     if (vldn + test >= 1.0)
         throw std::runtime_error("");
 
-    Vec2<double> prev = { VldnFraction, TestFraction };
+    Vec2<float_t> prev = { VldnFraction, TestFraction };
     VldnFraction = vldn, TestFraction = test;
     return prev;
 }
 
-PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
+PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<float_t> highlo, unsigned N)
 {
     Logging::Timer timer("MNIST2 data load");
 
@@ -87,7 +87,7 @@ PatternSet<unsigned char***> LoadMnistData2(Vec::Size3& InputSize, unsigned& Out
     return data;
 }
 
-PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<double> highlo, unsigned N)
+PatternSet<unsigned char***> LoadCifarData10(Vec::Size3& InputSize, unsigned& OutputSize, Vec::Vec2<float_t> highlo, unsigned N)
 {
     Logging::Timer timer("CIFAR10 data load");
 
