@@ -115,7 +115,12 @@ struct Kernel : public Volume
                     if (!PConnected || connection[z])
                         for (size_t y = s.y; y < size_t(e.y); ++y)
                             for (size_t x = s.x; x < size_t(e.x); ++x)
+                            {
                                 pgrads.at(z, y, x) += grad * at(z, y - is.y, x - is.x);
+                                /*if(x == pgrads.size.x/2 && y == pgrads.size.y / 2)
+                                Logging::Log << x << " " << y << "\t" << x - is.x << " " << y - is.y
+                                    << "\t" << gx << " " << gy << "\n";*/
+                            }
             }
     }
 
@@ -148,12 +153,7 @@ struct Kernel : public Volume
     std::ostream& Print(std::ostream& stream)
     {
         //float_t sum = 0; for (auto& w : *this) sum += w;
-        stream 
-            << " |  Stride: " << Stride
-            << " | Bias: " << Bias
-            << "\nWeights"
-            << *this;
-
+        stream  << " |  Stride: " << Stride << " | Bias: " << Bias << "\nWeights" << *this;
         return stream;
     }
     
@@ -215,7 +215,7 @@ public:
             Kernels[i].Apply(Input, Act, Output(i), LGrads(i), PartiallyConnected ? ConnTable.data[i] : nullptr);
 
 #ifdef CUDA_PROJECT
-        CudaLayer.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "ConvLayer OP");
+        CudaLayer.ForwardPass(Input.data[0][0], Kernels[0].Padded).CompareTo(Output.begin(), Output.end(), Name+"OP");
 #endif
         if (Next) Next->ForwardPass();
     }
@@ -231,6 +231,11 @@ public:
                 Kernels[i].BackwardPass(Grads(i), Prev->GetOutput(), PGrads, dW[i], Eta, PartiallyConnected ? ConnTable.data[i] : nullptr);
 
             Prev->BackwardPass(PGrads);
+
+#ifdef CUDA_PROJECT
+            CudaLayer.BackwardPass(backError.begin(), Act->Eta, Kernels[0].Padded, Grads.begin())
+                    .CompareTo(PGrads.begin(), PGrads.end(), Name + "PGrads");
+#endif
         }
         else
             for (unsigned i = 0; i < Kernels.size(); ++i)
@@ -243,8 +248,7 @@ public:
 
         if (all || printList.find("Summary") != std::string::npos)
         {
-            out
-                << "\n--> Summary for " << Name 
+            out << "\n--> Summary for " << Name 
                 << "\nActivation  : " << Act->Name << "\t| Eta: " << Eta
                 << "\nInput Size  : " << Input.size
                 << "\nNum Kernels : " << Kernels.size()

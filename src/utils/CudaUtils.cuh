@@ -21,6 +21,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #define _CUDA_UTILS_INCLUDED_
 
 #include "Utils.hxx"
+#include "Vec23.hxx"
 
 #define CUDA_CHECK(Err) if((Err) != cudaSuccess) { \
     std::cerr << "\nCuda error at " << __FUNCTION__ << " " << __FILE__ << "(" << __LINE__ << "): "  \
@@ -37,6 +38,8 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #define VEC22DIM(s) dim3(unsigned(s.x),unsigned(s.y),1)
 
 #define VEC32DIM(s) dim3(unsigned(s.x),unsigned(s.y),unsigned(s.z))
+
+#define DIM32SIZE(s) Vec::Size3(s.x,s.y,s.z)
 
 #define EXPAND_KLP(lp) lp.GridSize, lp.BlockSize, lp.BlockSharedMemSize
 
@@ -61,12 +64,14 @@ namespace CudaUtils
 
     __device__ inline size_t Lin2(const Vec::Size3& s) { return s.x*s.y; }
 
-    __device__ inline size_t LinOffset(const Vec::Size2& s, const Vec::Size3& v) { return v.z * s.x * s.y + v.y * s.x + v.x; }
+    template<typename Size3Type>
+    __device__ inline size_t LinOffset(const Size3Type& s, const Vec::Size3& v) 
+    { return v.z * s.x * s.y + v.y * s.x + v.x; }
 
     template<typename T, typename Iter> 
     std::pair<bool, size_t> DevHostCmp(Iter begin, Iter end, T* devData, bool print = true)
     {
-        auto m = std::mismatch(begin, end, devData, Utils::BitCompare<T,4>);
+        auto m = std::mismatch(begin, end, devData, Utils::FloatCompare<T,4>);
         auto dist = std::distance(begin, end);
         
         if (m.first != end || m.second != devData + dist)
@@ -85,8 +90,15 @@ namespace CudaUtils
 	struct KernelLaunchParams
 	{
 		dim3 GridSize, BlockSize;
-		size_t BlockSharedMemSize; // per
+		size_t BlockSharedMemSize;
 	};
+
+    inline std::ostream& operator << (std::ostream& o, const KernelLaunchParams& klp)
+    {
+        o << "  GridDim : " << DIM32SIZE(klp.GridSize) << "\nBlockSize : " << DIM32SIZE(klp.BlockSize)
+            << "\nShared Mem: " << klp.BlockSharedMemSize << "Bytes\n";
+        return o;
+    }
 
 	inline int size_of(dim3 d) { return d.x*d.y*d.z; }
 

@@ -81,7 +81,7 @@ namespace CudaSimpleMatrix {
         void Clear() { CUDA_CHECK(devData && cudaFree(devData));  devData = nullptr; }
 
         template<typename Iter>
-        void CompareTo(Iter begin, Iter end, const char* msg = "", bool throwErr = true, size_t offset = 0)
+        void CompareTo(Iter begin, Iter end, std::string msg = "", bool throwErr = true, size_t offset = 0)
         {
             auto res = CudaUtils::DevHostCmp(begin, end, devData, false);
             if (!res.first)
@@ -101,7 +101,7 @@ namespace CudaSimpleMatrix {
 
                 throw std::runtime_error("device and host computation disagree");
             }
-            Logging::Log << "\n" << msg << ".. Macth!";
+            Logging::Log << "\n" << msg << ".. Macth!" << Logging::Log.flush;
         }
 
         template <typename U>

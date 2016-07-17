@@ -58,9 +58,11 @@ struct CudaConvolutionLayer
 
 	~CudaConvolutionLayer();
 
-	CudaSimpleMatrix::CudaMatrix<float_t> Kernels, Results, Input;
+    CudaSimpleMatrix::CudaMatrix<float_t> Kernels, Results, Input, Grads, PGrads;
 
-	CudaSimpleMatrix::CudaMatrix<float_t> ForwardPass(float_t* input);
+	CudaSimpleMatrix::CudaMatrix<float_t> ForwardPass(float_t* input, bool Padded);
+
+    CudaSimpleMatrix::CudaMatrix<float_t> BackwardPass(float_t* backError, float_t e, bool Padded, float_t*);
 
 	CudaUtils::KernelLaunchParams FwdPassKLP, BwdPassKLP;
 	bool IpInConst;

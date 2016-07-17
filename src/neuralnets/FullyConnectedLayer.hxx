@@ -138,7 +138,7 @@ public:
             Output[i] = Neurons[i].ForwardPass(Input.data[0][0], Act, LGrads[i]);
 
 #ifdef CUDA_PROJECT
-		CudaNeurons.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), "FCOp");
+		CudaNeurons.ForwardPass(Input.data[0][0]).CompareTo(Output.begin(), Output.end(), Name+"Op");
 #endif
         if (Next) Next->ForwardPass();
     }
@@ -156,7 +156,7 @@ public:
 
             Prev->BackwardPass(PGrads);
 #ifdef CUDA_PROJECT
-            CudaNeurons.BackwardPass(backError.data[0][0], Eta).CompareTo(PGrads.begin(), PGrads.end(), "\nPGrads");
+            CudaNeurons.BackwardPass(backError.data[0][0], Eta).CompareTo(PGrads.begin(), PGrads.end(), Name + "PGrads");
             for (size_t i = 0; i < Neurons.size(); ++i)
                 Neurons[i].Compare(CudaNeurons.Weights.devData + i *CudaNeurons.Weights.size.x);
 #endif

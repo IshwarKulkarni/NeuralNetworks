@@ -53,8 +53,17 @@ CudaFullyConnectedLayer::CudaFullyConnectedLayer(unsigned numInputs, unsigned nu
 
 	BwdPassKLP = { dim3(), dim3(NumInputs + 1, NumNeurons, 1), sizeof(float_t) * NumInputs * NumNeurons };
 	
-	if (!LaunchChecker::Check(FwdPassKLP) || !(BwdSingleBlock = LaunchChecker::Check(BwdPassKLP)))
-		throw std::runtime_error("Layer too large for GPU");
+    if (!LaunchChecker::Check(FwdPassKLP))
+    {
+        std::cerr << "\nLayer is too big for launchgin Forward Pass Kernel\n" << FwdPassKLP;
+        throw std::runtime_error("Layer too large for GPU");
+    }
+
+    if (!(BwdSingleBlock = LaunchChecker::Check(BwdPassKLP)))
+    {
+        std::cerr << "\nLayer is too big for launchgin Forward Pass Kernel\n" << BwdPassKLP;
+        throw std::runtime_error("Layer too large for GPU");
+    }
 
 }
 
