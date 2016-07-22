@@ -31,18 +31,40 @@ struct CudaFullyConnectedLayer
     unsigned NumInputs;// Not Bias
 
     ActivationId Act;
-	CudaSimpleMatrix::CudaMatrix<double> Weights,  Results, Grads, LGrads, PGrads, Input;
+	CudaSimpleMatrix::CudaMatrix<float_t> Weights,  Results, Grads, LGrads, PGrads, Input;
 	
     CudaFullyConnectedLayer(unsigned numInputs, unsigned numNeurons, ActivationId actId);
 
-	CudaSimpleMatrix::CudaMatrix<double> ForwardPass(double* input);
+	CudaSimpleMatrix::CudaMatrix<float_t> ForwardPass(float_t* input);
 
-	CudaSimpleMatrix::CudaMatrix<double> BackwardPass(double* backError, double e);
+	CudaSimpleMatrix::CudaMatrix<float_t> BackwardPass(float_t* backError, float_t e);
     
 	~CudaFullyConnectedLayer();
 
 	CudaUtils::KernelLaunchParams FwdPassKLP, BwdPassKLP;
 	bool FwdSingleBlock, BwdSingleBlock;
     
+};
+
+
+struct CudaConvolutionLayer
+{
+	Vec::Size3 KSz, IpSz, OpSz;
+	Vec::Size2 Stride;
+
+	unsigned NumKernels; ActivationId Act;
+
+    CudaConvolutionLayer(Vec::Size3 kSize, unsigned numKernels, Vec::Size3 ipSize, Vec::Size3 opSize, Vec::Size2 Stride, ActivationId act);
+
+	~CudaConvolutionLayer();
+
+    CudaSimpleMatrix::CudaMatrix<float_t> Kernels, Results, Input, Grads, PGrads;
+
+	CudaSimpleMatrix::CudaMatrix<float_t> ForwardPass(float_t* input, bool Padded);
+
+    CudaSimpleMatrix::CudaMatrix<float_t> BackwardPass(float_t* backError, float_t e, bool Padded, float_t*);
+
+	CudaUtils::KernelLaunchParams FwdPassKLP, BwdPassKLP;
+	bool IpInConst;
 };
 #endif 
