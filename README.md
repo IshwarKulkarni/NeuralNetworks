@@ -41,14 +41,23 @@ The repo is organized as
 		
 Currently supports:
 	1. Configurable Layers 
+    
 	 	a. Fully connected layer
+        
 		b. Convolution layer : can have partial connection ^1
+        
 		c. Average pooling layer
+        
 		d. Max pooling layer
+        
         e. Drop Connect layer
+        
         f. Attenuation layer
+        
 	2. Read network config from file with simple syntax
+    
 	3. Configurable activation function (Sigmoid/TanH/RELU)
+    
     
 ^1: 
 This achieves some 97%+ accuracy in classifying MNIST data (found at DATA_LOCATION macro in GCC and VS) in test1.config.
