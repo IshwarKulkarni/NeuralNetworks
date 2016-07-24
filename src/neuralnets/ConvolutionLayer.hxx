@@ -101,6 +101,7 @@ struct Kernel : public Volume
 
     inline void GetPGrads(Frame& gradients, Volume& pgrads, bool* connection)
     {
+        Logging::Log << "\n";
         for (size_t gy = 0; gy < gradients.Height(); ++gy)
             for (size_t gx = 0; gx < gradients.Width(); ++gx)
             {
@@ -117,11 +118,12 @@ struct Kernel : public Volume
                             for (size_t x = s.x; x < size_t(e.x); ++x)
                             {
                                 pgrads.at(z, y, x) += grad * at(z, y - is.y, x - is.x);
-                                /*if(x == pgrads.size.x/2 && y == pgrads.size.y / 2)
+                                if(x == pgrads.size.x/2 && y == pgrads.size.y / 2)
                                 Logging::Log << x << " " << y << "\t" << x - is.x << " " << y - is.y
-                                    << "\t" << gx << " " << gy << "\n";*/
+                                    << "\t" << gx << " " << gy << "\n";
                             }
             }
+        Logging::Log << "---\n" << Logging::Log.flush;
     }
 
     inline void ChangeWeights(Frame grads, const Volume& ipt, Volume& dW, float_t eta, bool* connection)
@@ -230,12 +232,13 @@ public:
             for (unsigned i = 0; i < Kernels.size(); ++i)
                 Kernels[i].BackwardPass(Grads(i), Prev->GetOutput(), PGrads, dW[i], Eta, PartiallyConnected ? ConnTable.data[i] : nullptr);
 
-            Prev->BackwardPass(PGrads);
-
 #ifdef CUDA_PROJECT
             CudaLayer.BackwardPass(backError.begin(), Act->Eta, Kernels[0].Padded, Grads.begin())
                     .CompareTo(PGrads.begin(), PGrads.end(), Name + "PGrads");
 #endif
+
+            Prev->BackwardPass(PGrads);
+
         }
         else
             for (unsigned i = 0; i < Kernels.size(); ++i)

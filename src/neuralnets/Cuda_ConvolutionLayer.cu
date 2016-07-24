@@ -49,7 +49,9 @@ CudaConvolutionLayer::CudaConvolutionLayer(
     Grads({ OpSz.x, OpSz.y*OpSz.z }), PGrads({ IpSz})
 {              //blockIdx = OpIdx
 	FwdPassKLP = { VEC32DIM(OpSz), dim3(1,KSz.y, KSz.z), KSz.y*KSz.z*sizeof(float_t) };
-    BwdPassKLP = { VEC32DIM(IpSz), VEC32DIM(KSz), KSz()*sizeof(float_t) };
+
+    kSize.x = iDivUp(kSize.x, stride.x), kSize.y = iDivUp(kSize.y, stride.y);
+    BwdPassKLP = { VEC32DIM(IpSz), VEC32DIM(kSize), kSize()*sizeof(float_t) };
 
 	if (!LaunchChecker::Check(FwdPassKLP) || !LaunchChecker::Check(BwdPassKLP))
 		throw std::runtime_error("Kernels too big/numerous for launching");
@@ -57,7 +59,35 @@ CudaConvolutionLayer::CudaConvolutionLayer(
 	//if (!IpInConst && LaunchChecker::ConstCheck(OpSz.z*(KSz()  + 1 )) ) 
 	//	throw std::runtime_error("Kernels too big/numerous for constant mem size");
 
-	if (!IpInConst)throw std::runtime_error("Kernels too big/numerous for constant mem size");
+	if (!IpInConst)
+        throw std::runtime_error("Kernels too big/numerous for constant mem size");
+}
+
+__device__ void sumByZ()
+{
+    extern __shared__ float_t smem[];
+    __syncthreads();
+
+    unsigned zsize = CudaUtils::NextPowerOf2(blockDim.z) / 2;
+    for (unsigned int s = zsize; s > 0; s >>= 1) {
+        if (threadIdx.z < s)
+        {
+            smem[threadIdx.z + threadIdx.y * blockDim.z] +=
+                ((threadIdx.z + s < blockDim.z) ? smem[threadIdx.y*blockDim.z + threadIdx.z + s] : 0);
+            __syncthreads();
+        }
+    }
+
+    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0)
+    {
+        float_t sum = 0;
+#pragma unroll
+        for (unsigned i = 0; i < blockDim.x*blockDim.y; ++i) // TODO : is there a point in doing this parallely
+            sum += smem[i];
+
+        smem[0] = sum;
+    }
+    __syncthreads();
 }
 
 __global__ 
@@ -71,7 +101,6 @@ void Conv_forwardPass( Size3 kSz, Size3 ipSz, Size2 stride, ActivationId act, bo
     float_t prod = 0, bias = weights[KernelNum * (kSz() + 1) + kSz()];
 
     weights += KernelNum * (kSz() + 1) + LinOffset(kSz, { 0, y, z });
-    res     += LinOffset(gridDim, { blockIdx.x, blockIdx.y, KernelNum });
     
     int ipy = blockIdx.y * stride.y + y, ipx = blockIdx.x * stride.x; // ipz = z;
     if (Padded) ipy -= kSz.y / 2, ipx -= kSz.x / 2;
@@ -90,23 +119,10 @@ void Conv_forwardPass( Size3 kSz, Size3 ipSz, Size2 stride, ActivationId act, bo
     }
     smem[y*kSz.z + z] = prod;
 
-    __syncthreads();
-
-    unsigned zsize = CudaUtils::NextPowerOf2(blockDim.z); // fold z plane in half // sideways reduction
-    for (unsigned int s = zsize / 2; s > 0; s >>= 1) {
-        if (z < s)
-            smem[z + y * blockDim.z] += ((z + s < blockDim.z) ? smem[y*blockDim.z + z +s] : 0);
-        __syncthreads();
-    }
+    sumByZ();
 
     if (y == 0 && z == 0)
-    {
-        float_t dot = smem[0] + bias;
-        for (unsigned i = 1; i < blockDim.y; ++i)
-            dot += smem[i * blockDim.z];
-
-        *res = Activate(act, dot);
-    }
+        res[LinOffset(gridDim, { blockIdx.x, blockIdx.y, KernelNum })] = Activate(act, smem[0] + bias);
 }
 
 CudaSimpleMatrix::CudaMatrix<float_t> CudaConvolutionLayer::ForwardPass(float_t* input, bool Padded)
@@ -127,41 +143,30 @@ void Conv_makeGrads(float_t* grads, float_t * op, ActivationId act)
 }
 
 __global__ 
-void Conv_backwardPass(float_t* grads, float_t* weights, unsigned kernelW, Size3 gSize, bool padded, Size2 stride, float_t* pGrads)
+void Conv_backwardPass(float_t* grads, float_t* weights, Size3 kSz, Size3 gSize, bool padded, Size2 stride, float_t* pGrads)
 {
     Size3 k = DIM32SIZE(threadIdx);
-    Size3 kSz = DIM32SIZE(blockDim);
+    k *= stride; //k += Size3(1, 1, 0);
     unsigned z = blockIdx.z;
     weights += (kSz()* z);
 
     extern __shared__ float_t smem[];
-    
+
     unsigned wOffset = LinOffset(kSz, k);
     
-    Size3 g = { blockIdx.x + padded*(kSz.x / 2) - k.x, blockIdx.y + padded*(kSz.y / 2) - k.y, z };
+    Size3 g = { (blockIdx.x - k.x)/stride.x + padded*(kSz.x / 2) , (blockIdx.y - k.y) / stride.y + padded*(kSz.y / 2), z };
     
     if (g.x < gSize.x && g.y < gSize.y && g.z < gSize.z)
         smem[wOffset] = grads[LinOffset(gSize, g)] * weights[wOffset];
     else
-        smem[wOffset] = 0;
+        smem[wOffset] = 0; 
 
-    __syncthreads();
+    if (blockIdx.x == gridDim.x / 2 && blockIdx.y == gridDim.y / 2)
+        printf("%d %d\t%d %d\t%d %d | stride: %d,%d \n", blockIdx.x, blockIdx.y, k.x, k.y, g.x, g.y, stride.x, stride.y);
 
-    unsigned zsize = CudaUtils::NextPowerOf2(kSz.z);
-    for (unsigned int s = zsize / 2; s > 0; s >>= 1) {
-        if (k.z < s)
-            smem[k.z + k.y * kSz.z] += ((k.z + s < kSz.z) ? smem[k.y*kSz.z + k.z + s] : 0);
-        __syncthreads();
-    }
-
+    sumByZ();
     if (k.x == 0 && k.y == 0 && k.z == 0)
-    {
-        float_t sum = 0;
-        for (unsigned i = 0; i < kSz.x*kSz.y; ++i) // TODO : is there a point in doing this parallely
-            sum += smem[i];
-
-        pGrads[LinOffset(DIM32SIZE(gridDim), DIM32SIZE(blockIdx))] = sum;
-    }
+        pGrads[LinOffset(DIM32SIZE(gridDim), DIM32SIZE(blockIdx))] = smem[0];
 }
 
 CudaSimpleMatrix::CudaMatrix<float_t> CudaConvolutionLayer::BackwardPass(float_t* backError, float_t e, bool Padded, float_t* grads)
@@ -171,7 +176,7 @@ CudaSimpleMatrix::CudaMatrix<float_t> CudaConvolutionLayer::BackwardPass(float_t
     Conv_makeGrads <<< Results.size.y, Results.size.x >>> (Grads.devData, Results.devData, Act);
 
     Conv_backwardPass<<< EXPAND_KLP(BwdPassKLP) >>>(
-        Grads.devData, Kernels.devData, KSz.x, Results.size, Padded, Stride, PGrads.devData);
+        Grads.devData, Kernels.devData, KSz, Results.size, Padded, Stride, PGrads.devData);
 
     CUDA_CHECK_SYNCH;
 

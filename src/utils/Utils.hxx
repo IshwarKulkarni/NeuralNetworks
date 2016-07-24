@@ -44,7 +44,7 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #endif
 
 #ifdef CUDA_PROJECT
-#define float_t double // WHYDOESMATHHDEFINETHIS
+#define float_t float // WHYDOESMATHHDEFINETHIS
 //typedef double float_t;
 #else
 typedef float float_t;

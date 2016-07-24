@@ -71,7 +71,7 @@ namespace CudaUtils
     template<typename T, typename Iter> 
     std::pair<bool, size_t> DevHostCmp(Iter begin, Iter end, T* devData, bool print = true)
     {
-        auto m = std::mismatch(begin, end, devData, Utils::FloatCompare<T,4>);
+        auto m = std::mismatch(begin, end, devData, Utils::FloatCompare<T,1>);
         auto dist = std::distance(begin, end);
         
         if (m.first != end || m.second != devData + dist)

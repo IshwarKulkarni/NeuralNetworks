@@ -87,17 +87,20 @@ namespace CudaSimpleMatrix {
             if (!res.first)
             {
                 T d = devData[res.second], h = *(begin + res.second);
+                auto diff = (*this != begin);
                 Logging::Log
                     << "\n" << msg << " match failed at ("
-                    << res.second%size.x << "," << res.second / size.x << ")"
+                    << res.second%size.x << "," << res.second / size.x
                     << ") Device value: " << d << ". Other value:  " << h
-                    << " , D/O - 1 : " << (d/h - 1)
-                    << " , |D-O| : " << std::abs(d-h)
+                    << " , D/O - 1 : " << (d / h - 1)
+                    << " , |D-O| : " << std::abs(d - h)
                     << " > " << std::numeric_limits<T>::epsilon() << std::hex
-                    << " , " << Utils::BitRep<T>(d)() << "-" << Utils::BitRep<T>(h)() 
-                    << std::dec
+                    << " , " << Utils::BitRep<T>(d)() << "-" << Utils::BitRep<T>(h)()
+                    << std::dec << std::noboolalpha << diff
                     << "\nDevice matrix: " << *this << "\nOther Matrix : ";
                 SimpleMatrix::Out2d(Logging::Log, &begin, size.x, size.y,"");
+
+                diff.Clear();
 
                 throw std::runtime_error("device and host computation disagree");
             }
@@ -117,6 +120,8 @@ namespace CudaSimpleMatrix {
 		CudaMatrix() {};
     };
 
+
+
     template<typename T>
     std::ostream&  operator << (std::ostream& o,const CudaMatrix<T>& mat) 
     {
@@ -125,6 +130,16 @@ namespace CudaSimpleMatrix {
         o.flush();
         return o;
     }
+}
+
+template <typename U, typename T>
+SimpleMatrix::Matrix<bool>  operator != (const CudaSimpleMatrix::CudaMatrix<U>& cuMat, T other)
+{
+    SimpleMatrix::Matrix<bool> diff(cuMat.size);
+    auto c = cuMat.devData;
+    for (auto& d : diff) d = (*c++ == *other++);
+
+    return diff;
 }
 
 #endif
