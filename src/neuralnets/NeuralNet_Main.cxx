@@ -23,6 +23,11 @@ FITNESS FOR A PARTICULAR PURPOSE.
 
 #include "Network.hxx"
 #include "utils/CommandLine.hxx"
+#include <signal.h>
+#include <cstdlib>
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
 
 using namespace std;
 using namespace Logging;
@@ -71,12 +76,12 @@ void statusMonitor(const Network* nn, bool& monitor)
             imRate = double(stat->SamplesDone) / timeSpent;
 
         cout
-            << setw(4) << setprecision(4)
-            << "\rEpoch " << stat->EpochNum << "> [" << timeSpent << "s]\t"
+            << setw(4) << setprecision(4) << setfill(' ')
+            << "\rEpoch " << stat->EpochNum << "> [" << timeSpent << "s] "
             << " Complete : " << done
-            << "%\tPass<" << stat->PassWinSize << ">: " << passRate
-            << "%\tTotal Pass: " << cumPassRate * 100
-            << "%\tRate : " << imRate << " smpls/s.         ";
+            << "% Pass<" << stat->PassWinSize << ">: " << passRate
+            << "% Total Pass: " << cumPassRate * 100
+            << "% Rate : " << imRate << "Hz.  ";
 
         //Log << stat->EpochNum << Utils::TimeSince(stat->TrainStart) 
         //    << '\t' <<  done << '\t' << passRate << '\t' << cumPassRate << '\n';
@@ -101,32 +106,53 @@ int main(int argc, char** argv)
     auto data = LoadMnistData2(in, out, nn.GetOutputHiLo(), rParam.NumSamples);
     data.Summarize(Log, false);
 
+   auto monitor = true;
+    std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
+
+    bool breakTraining = false;
+#ifdef _MSC_VER
+    auto kbListen = true;
+
+    std::thread kbListener([&](){
+        cout << "\nPress Esc to stop this epoch, Shift+Esc to stop training.";
+        while (kbListen){
+            if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000 ) && (GetAsyncKeyState(VK_SHIFT) & 0x8000))
+                cout << "\nStopping training loop.. Running test data? " << (breakTraining = nn.StopTraining());
+            else if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000))
+                    cout << "\nBreaking this training iteration.. Running Validation? " << nn.StopTraining() << "\n";
+            std::this_thread::sleep_for(milliseconds(150));
+        }
+        }
+    );
+#endif
+
     cout << "\nTraining... " << endl;
     Timer  epochTime("ClassifierTime");
 
-    auto monitor = true;
-    std::thread statMonitorThread(statusMonitor, &nn, std::ref(monitor));
-
-    for (size_t epoch = 0; epoch < rParam.MaxEpocs; ++epoch)
+    for (size_t epoch = 0; epoch < rParam.MaxEpocs && !breakTraining; ++epoch)
     {
         epochTime.TimeFromLastCheck();
         nn.Train(data.TrainBegin(), data.TrainEnd());
         double lastCheck = epochTime.TimeFromLastCheck();
 
-        nn.Test(data.VldnBegin(), data.VldnEnd());
+        if (!breakTraining) nn.Test(data.VldnBegin(), data.VldnEnd());
 
         cout << "\rEpoch " << epoch << "> [" << lastCheck << "s]" 
             << ":\t(Accuracy, RMSE): " << nn.Results() << string(80, ' ') << "\n";
 
         Log << "\rEpoch " << epoch << "> [" << lastCheck << "s]"
-            << ":\t(Accuracy, RMSE): " << nn.Results() << "\n";
+            << ":\t(Accuracy, RMSE): " << nn.Results() * Vec::Size2(100 , 1) << "\n";
 
         if (nn.Results().first * 100 > rParam.TargetAcc)  break;
+        data.ShuffleTrain();
     }
-    
+    epochTime.Stop();
     monitor = false;
     statMonitorThread.join();
-
+#ifdef _MSC_VER
+    kbListen = false;
+    kbListener.join();
+#endif
     if (rParam.RunTest)
     {
         Utils::TopN<Network::TestNumErr>* topNFails = nullptr;
@@ -144,7 +170,7 @@ int main(int argc, char** argv)
             size_t i = 0;
             cout << "\nWriting top " << topNFails->size() << " fails as images.. ";
             for (auto& f : *topNFails)
-                PPMIO::Write("Fail_" + to_string(i++), MNISTReader::ImW, MNISTReader::ImH, 1,
+                PPMIO::Write("Fail_" + to_string(i++) + "_" + to_string(f.Pred) + "_" + to_string(f.Actu), MNISTReader::ImW, MNISTReader::ImH, 1,
                     (data.TestBegin() + f.TestOffset)->Input[0][0]);
 
             cout << "Done\n";

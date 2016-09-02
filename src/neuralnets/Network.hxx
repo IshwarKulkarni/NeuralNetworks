@@ -75,6 +75,7 @@ public: // exposed types :
     struct TestNumErr
     {
         double Err;
+        size_t Pred, Actu;
         size_t TestOffset;   
         operator double() const { return Err; }
     };
@@ -99,6 +100,8 @@ private:
 
     NetworkStatus CurrentStatus;
 
+    bool TrainingEnabled;
+
 public: 
 
     NetworkStatus GetCurretnStatus() const { return CurrentStatus; }
@@ -109,6 +112,8 @@ public:
         
     Network(std::string inFile);
 
+    inline bool StopTraining(){ bool t = TrainingEnabled; TrainingEnabled = false; return t; }
+
     template<typename TrainIter>
     inline void Train(TrainIter begin, TrainIter end)
     {
@@ -116,9 +121,9 @@ public:
         TrainEpocStatus* stat;
         TrainEpocStatuses.push_back(stat = new TrainEpocStatus(std::distance(begin, end), TrainEpocStatuses.size()));
         
-        //auto& pred = back()->GetAct()->ResultCmpPredicate;
-        
-        for (auto iter = begin; iter != end; ++iter, stat->SamplesDone++)
+        auto& pred = back()->GetAct()->ResultCmpPredicate;
+        double softmaxSum = 0; 
+        for (auto iter = begin; iter != end && TrainingEnabled; ++iter, stat->SamplesDone++)
         {
             iter->GetInput(f->GetInput());
             f->ForwardPass();
@@ -126,18 +131,28 @@ public:
             auto& out = b->GetOutput();
             ErrorFunction->Prime(out, iter->Target, ErrFRes);
 
-            //bool pass = std::equal(out.begin(), out.end(), iter->Target, pred);
-            bool pass(std::max_element(out.begin(), out.end()) - out.begin() ==
-                std::max_element(iter->Target, iter->Target + 10) - iter->Target);
-
+            bool pass = CompareOutput(out, iter->Target, pred).second;
             stat->TotNumPasses += pass;
             stat->LastPasses[stat->SamplesDone % stat->PassWinSize] = pass;
+
             b->BackwardPass(ErrFRes);
         }
         for (auto& l : *this) l->WeightDecay(EtaDecayRate);
+        TrainingEnabled = true;
 
         CurrentStatus = None;
     }
+
+    template<typename TargetIter, typename Pred>
+    inline std::pair<std::pair<size_t, size_t>, bool> CompareOutput(const Volume &out, const TargetIter Target, Pred pred)
+    {
+        //bool pass = std::equal(out.begin(), out.end(), iter->Target, pred);
+        size_t  o = std::max_element(out.begin(), out.end()) - out.begin(), 
+                t = std::max_element(Target, Target + 10) - Target;
+
+        return make_pair(make_pair(o, t), o == t);
+    }
+
 
 
     template<typename TestIter>
@@ -156,12 +171,13 @@ public:
             f->ForwardPass();
 
             auto& out = b->GetOutput();
-            NumValCorrect += std::equal(out.begin(), out.end(), iter->Target, pred);
+            auto& co = CompareOutput(out, iter->Target, pred);
+            NumValCorrect += co.second;
             ErrorFunction->Apply(out, iter->Target, ErrFRes);
             double thisRmse = std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
             VldnRMSE += thisRmse;
             
-            if (topNFails) topNFails->insert({ thisRmse, numTest });
+            if (topNFails) topNFails->insert({ thisRmse, co.first.first,co.first.second, numTest });
         }
 
         NumVal = numTest;
@@ -235,6 +251,7 @@ public:
         ErrFRes.Clear();
         for (auto& s : TrainEpocStatuses) delete s;
     }
+
 };
 
 #endif

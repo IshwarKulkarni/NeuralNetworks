@@ -52,7 +52,6 @@ struct MeanSquareErrorType : public ErrorFunctionType
     }
 };
 
-// TODO : fix this!
 struct CrossEntropyType  : ErrorFunctionType{
 public:
     virtual std::string Name() const override { return "CrossEntropyError"; };
@@ -60,23 +59,21 @@ public:
     virtual inline void Prime(const Volume& out, const double* target, Volume& res) const override
     {
         for (size_t i = 0; i < out.size(); ++i)
-            res[i] = (out[i] - target[i]) / (out[i] * (1. - target[i]));            
+            res[i] = (out[i] - target[i]);
     }
 
     inline void  Apply(const Volume& out, const double* target, Volume& res) const override
     {
         for (size_t i = 0; i < out.size(); ++i)
-            res[i] = -target[i] * std::log(out[i]) - (1. - target[i]) * std::log(1. - out[i]);
+            res[i] = -(target[i] * std::log(out[i]) + (1. - target[i]) * std::log(1. - out[i]));
     }
 };
 
 inline std::shared_ptr<ErrorFunctionType> GetErrofFunctionByName(std::string name)
 {
-    if (name == "CrossEntropyError")
-        return std::make_shared<CrossEntropyType>();
+    if (name == "CrossEntropyError") return std::make_shared<CrossEntropyType>();
 
-    if (name == "MeanSquareError")
-        return std::make_shared<MeanSquareErrorType>();
+    if (name == "MeanSquareError") return std::make_shared<MeanSquareErrorType>();
 
     return nullptr;
 }

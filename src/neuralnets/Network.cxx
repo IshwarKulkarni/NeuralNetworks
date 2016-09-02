@@ -37,7 +37,8 @@ Network::Network(std::string configFile) :
     ErrorFunction(GetErrofFunctionByName("MeanSquareError")),
     f(nullptr), 
     b(nullptr),
-    CurrentStatus(Building)
+    CurrentStatus(Building),
+    TrainingEnabled(true)
 {
     std::ifstream inFile(configFile.c_str(), ios::in | ios::binary);
     if (!inFile.good())
@@ -66,10 +67,10 @@ Network::Network(std::string configFile) :
 
             MultiplyEta(EtaMultiplier);
 
-            std::string ErrFName = "MeanSquareError";
-            NVPP_GET_TYPE_WNAME(nvpp, ErrFName);
-            if ((ErrorFunction = GetErrofFunctionByName(ErrFName)) == nullptr)
-                throw std::invalid_argument("Cannot find Error function by name: " + ErrFName);
+            std::string ErrorFunctionName = "MeanSquareError";
+            NVPP_GET_TYPE_WNAME(nvpp, ErrorFunctionName);
+            if ((ErrorFunction = GetErrofFunctionByName(ErrorFunctionName)) == nullptr)
+                throw std::invalid_argument("Cannot find Error function by name: " + ErrorFunctionName);
 
             Print("Network");
         }
@@ -250,3 +251,4 @@ Network::Network(std::string configFile) :
 
     //Print("Network & Summary");
 }
+
