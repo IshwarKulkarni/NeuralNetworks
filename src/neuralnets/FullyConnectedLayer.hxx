@@ -31,10 +31,10 @@ FITNESS FOR A PARTICULAR PURPOSE.
 #endif
 
 typedef std::vector<double> Row;
-
+static const size_t BatchSize = 16;
 struct Neuron
 {
-    Neuron(size_t N) : Weights(N + 1), dWeights(N+1) {}
+    Neuron(size_t N) : Weights(N + 1), dWeightsArray( BatchSize, Row(N+1) ), Batch(0), dWeights(N+1){}
 
     inline void InitWeights()
     {
@@ -72,6 +72,25 @@ struct Neuron
 
         for (unsigned i = 0; i < Weights.size(); ++i)
             Weights[i] -= dWeights[i] * eta;
+
+        /*
+        auto& dWeights =  dWeightsArray[Batch++];
+
+        for (unsigned i = 0; i < Weights.size() - 1; ++i)
+        dWeights[i] += grad * inputs[i];
+
+        dWeights.back() += grad;
+
+        if (Batch == dWeightsArr.size() - 1){
+        for (size_t b = 0; b < BatchSize; ++b)
+        {
+        for (size_t i = 0; i < Weights.size(); ++i)
+        Weights[i] -= dWeightsArray[b][i] * eta;
+        dWeightsArray[b].assign(dWeightsArray[b].size(), 0);
+        }
+        Batch = 0;
+        }
+        */
     }
 
 
@@ -87,6 +106,8 @@ struct Neuron
 
 private:
     Row Weights, dWeights; // Nth index is Bias
+    std::vector<Row> dWeightsArray;
+    size_t Batch;
 };
 
 

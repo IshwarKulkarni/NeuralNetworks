@@ -153,8 +153,6 @@ public:
         return make_pair(make_pair(o, t), o == t);
     }
 
-
-
     template<typename TestIter>
     inline double Test(TestIter begin, TestIter end, Utils::TopN<TestNumErr>* topNFails = nullptr)
     {

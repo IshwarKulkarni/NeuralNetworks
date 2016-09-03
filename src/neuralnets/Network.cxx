@@ -82,7 +82,7 @@ Network::Network(std::string configFile) :
 
             Vec::Size3 inSize = b ? b->GetInput().size : Vec::Size3(0, 1, 1);
             nvpp.Get("InputSize", inSize.x);
-            if (!inSize) throw std::runtime_error("Input size cannot be zero on first input");
+            if (!inSize()) throw std::runtime_error("Input size cannot be zero on first input");
 
             auto nameVals = nvpp.GetPairs<size_t>();
             for (size_t i = 0; i < nameVals.size(); ++i)
