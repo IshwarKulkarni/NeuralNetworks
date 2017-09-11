@@ -111,7 +111,7 @@ public:
         {
             for (auto* d = toCheck.begin(); d != toCheck.end(); ++d)
             {
-                if (isnan(*d) || isinf(*d))
+                if (std::isnan(*d) || std::isinf(*d))
                 {
                     Logging::Log
                         << Name << "Infinity or NaN found in  : " << toCheck << " at " << std::distance(toCheck.begin(), d)

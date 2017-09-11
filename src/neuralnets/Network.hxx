@@ -131,7 +131,7 @@ public:
             auto& out = b->GetOutput();
             ErrorFunction->Prime(out, iter->Target, ErrFRes);
 
-            bool pass = CompareOutput(out, iter->Target, pred).second;
+            bool pass = std::get<2>(CompareOutput(out, iter->Target, pred));
             stat->TotNumPasses += pass;
             stat->LastPasses[stat->SamplesDone % stat->PassWinSize] = pass;
 
@@ -143,14 +143,15 @@ public:
         CurrentStatus = None;
     }
 
+
     template<typename TargetIter, typename Pred>
-    inline std::pair<std::pair<size_t, size_t>, bool> CompareOutput(const Volume &out, const TargetIter Target, Pred pred)
+    inline std::tuple<size_t, size_t, bool> CompareOutput(const Volume &out, const TargetIter Target, Pred pred)
     {
         //bool pass = std::equal(out.begin(), out.end(), iter->Target, pred);
         size_t  o = std::max_element(out.begin(), out.end()) - out.begin(), 
                 t = std::max_element(Target, Target + 10) - Target;
 
-        return make_pair(make_pair(o, t), o == t);
+        return std::make_tuple(o, t, o == t);
     }
 
     template<typename TestIter>
@@ -169,13 +170,13 @@ public:
             f->ForwardPass();
 
             auto& out = b->GetOutput();
-            auto& co = CompareOutput(out, iter->Target, pred);
-            NumValCorrect += co.second;
+            const auto& co = CompareOutput(out, iter->Target, pred);
+            NumValCorrect += std::get<2>(co);
             ErrorFunction->Apply(out, iter->Target, ErrFRes);
             double thisRmse = std::accumulate(ErrFRes.begin(), ErrFRes.end(), double(0));
             VldnRMSE += thisRmse;
             
-            if (topNFails) topNFails->insert({ thisRmse, co.first.first,co.first.second, numTest });
+            if (topNFails) topNFails->insert({ thisRmse, std::get<0>(co), std::get<1>(co), numTest });
         }
 
         NumVal = numTest;
